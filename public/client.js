@@ -117,6 +117,7 @@ socket.on('gameState', data => {
   L.teams       = data.teams       || {};
   L.decisions   = data.decisions   || {};
   L.quizAnswers = data.quizAnswers  || {};
+  // revealedAnswer is embedded in L.gameState.revealedAnswer (set by server in AFTERMATH)
 
   // Phase change sounds + animations
   if (prevPhase !== L.gameState.phase) {
@@ -268,12 +269,13 @@ function updateTimerUI(left, max, phase) {
 function startRollbackWindow() {
   const team = myTeam(); if (!team) return;
   const gs   = L.gameState; if (!gs) return;
-  const s    = getScenario(gs.currentLevel, gs.currentScenarioIdx);
-  if (!s) return;
+  const correctAnswer = gs.revealedAnswer;
+  if (!correctAnswer) return;
 
   const myDec = L.decisions[key(L.teamName)];
   const cards = team.cards || {};
-  if (myDec !== 'deploy' || myDec === s.answer || cards.rollback === false) return;
+  // Only show rollback if: deployed wrong AND rollback card still available
+  if (myDec !== 'deploy' || myDec === correctAnswer || cards.rollback === false) return;
 
   const rollbackBtn = $('rollback-btn');
   if (!rollbackBtn) return;
@@ -698,23 +700,23 @@ function renderDecoderLevel(team, s, phase) {
 }
 
 function renderResults(team, s) {
+  const gs = L.gameState || {};
+  const correctAnswer = gs.revealedAnswer || s.answer || '?';
   const myDec = L.decisions[key(L.teamName)];
   if (team.frozen) {
     showBanner('wrong','❄ You were frozen this round. No points.');
   } else if (!myDec) {
-    showBanner('wrong',`⏱ No decision — −1 pt. Correct: ${s.answer.toUpperCase()}`);
-  } else if (myDec === s.answer) {
-    const outcome = s.delayOutcome && myDec==='delay' ? s.delayOutcome : (s.deployOutcome && myDec==='deploy' ? s.deployOutcome : '');
+    showBanner('wrong',`⏱ No decision — −1 pt. Correct: ${correctAnswer.toUpperCase()}`);
+  } else if (myDec === correctAnswer) {
+    const outcome = s && s.delayOutcome && myDec==='delay' ? s.delayOutcome : (s && s.deployOutcome && myDec==='deploy' ? s.deployOutcome : '');
     showBanner('correct',`✓ CORRECT! +6 pts.${outcome ? ' ' + outcome : ''}`);
     SFX.correct();
   } else {
     const pen = team.targeted ? -8 : -5;
-    const outcome = s.delayOutcome && myDec==='deploy' ? '⚠ ' + s.deployOutcome : (s.delayOutcome && myDec==='delay' ? s.delayOutcome : '');
-    showBanner('wrong',`✗ WRONG! ${pen} pts. Correct: ${s.answer.toUpperCase()}. ${s.explanation||''}`);
+    showBanner('wrong',`✗ WRONG! ${pen} pts. Correct: ${correctAnswer.toUpperCase()}. ${s ? (s.explanation||'') : ''}`);
     SFX.wrong();
   }
-  // Show learning point if available
-  if (s.learning) {
+  if (s && s.learning) {
     const b = $('result-banner');
     b.innerHTML += `<br><span style="color:var(--amber);font-size:11px;margin-top:6px;display:block">🎯 ${s.learning}</span>`;
   }
@@ -833,13 +835,18 @@ function renderAdmin() {
 
   const inRound = phase==='BREACH'||phase==='SABOTAGE_PULSE'||phase==='BRIEFING';
   $('btn-start-round').disabled = inRound;
-  $('btn-reveal').disabled      = !inRound && phase!=='BRIEFING';
+  $('btn-reveal').disabled      = !inRound;
   $('btn-next').disabled        = phase!=='RECON'&&phase!=='AFTERMATH';
 
   const ad = $('admin-answer-display');
   if (s && (phase==='AFTERMATH'||phase==='RECON')) {
-    ad.className=`answer-${s.answer}`; ad.textContent=s.answer.toUpperCase()+' — '+s.explanation;
-  } else { ad.className='answer-hidden'; ad.textContent='Hidden until reveal'; }
+    const revAns = gs.revealedAnswer || s.answer || '?';
+    ad.className=`answer-${revAns}`; ad.textContent=revAns.toUpperCase()+' — '+s.explanation;
+  } else if (s && phase==='LOBBY') {
+    ad.className='answer-hidden'; ad.textContent='Hidden until reveal';
+  } else {
+    ad.className='answer-hidden'; ad.textContent='Hidden until reveal';
+  }
 
   // Levels
   const names = ['The Deployment Trenches',"The Architect's Anatomy",'Digital Forensic Trail','The BlackBox Protocol'];
@@ -855,7 +862,7 @@ function renderAdmin() {
   $('scenario-list').innerHTML = list.map((sc,i)=>`
     <button class="scenario-btn ${curIdx===i?'active':''}" onclick="adminSelectScenario(${i})">
       <div class="scenario-btn-num">Rd ${sc.round} · ${sc.type.toUpperCase()}</div>
-      <div class="scenario-btn-title">${sc.title.substring(0,36)}…</div>
+      <div class="scenario-btn-title">${sc.title.length>36?sc.title.substring(0,36)+'…':sc.title}</div>
     </button>`).join('');
 
   if (s) { $('admin-scenario-preview').textContent=s.body; $('admin-scenario-preview').className='scenario-preview-text'; }
@@ -998,8 +1005,9 @@ function renderProjector() {
     if(phase==='AFTERMATH'||phase==='RECON'){
       $('proj-answer-reveal').style.display='block';
       const b=$('proj-answer-banner');
-      b.className   = 'proj-answer-banner '+(s.answer==='deploy'?'correct':'wrong');
-      b.textContent = `✓ ${s.answer.toUpperCase()} — ${s.explanation}`;
+      const revAns = gs.revealedAnswer || (s && s.answer) || '?';
+      b.className   = 'proj-answer-banner '+(revAns==='deploy'?'correct':'wrong');
+      b.textContent = `✓ ${revAns.toUpperCase()} — ${s ? s.explanation : ''}`;
     } else {
       $('proj-answer-reveal').style.display='none';
     }
