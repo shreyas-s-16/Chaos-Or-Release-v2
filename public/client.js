@@ -1,0 +1,1054 @@
+// ═══════════════════════════════════════════════════════
+//  CHAOS OR RELEASE v2 — Frontend Client
+//  5 Phases · 4 Level Types · Redis-backed server
+// ═══════════════════════════════════════════════════════
+
+const socket = io({ transports: ['websocket', 'polling'] });
+
+// ═══════════════════════════════════════════════════════
+//  AUDIO ENGINE
+// ═══════════════════════════════════════════════════════
+let audioCtx = null;
+function getAudio() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  return audioCtx;
+}
+function tone(freq, type = 'sine', dur = 0.15, vol = 0.3, delay = 0) {
+  try {
+    const ctx = getAudio();
+    const o = ctx.createOscillator(), g = ctx.createGain();
+    o.connect(g); g.connect(ctx.destination);
+    o.type = type;
+    o.frequency.setValueAtTime(freq, ctx.currentTime + delay);
+    g.gain.setValueAtTime(0, ctx.currentTime + delay);
+    g.gain.linearRampToValueAtTime(vol, ctx.currentTime + delay + 0.01);
+    g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + delay + dur);
+    o.start(ctx.currentTime + delay);
+    o.stop(ctx.currentTime + delay + dur + 0.05);
+  } catch(e) {}
+}
+
+const SFX = {
+  click()         { tone(440,'square',0.08,0.15); },
+  deploy()        { tone(523,'sine',0.1,0.3); tone(659,'sine',0.12,0.25,0.1); tone(784,'sine',0.15,0.2,0.22); },
+  delay()         { tone(392,'sawtooth',0.1,0.25); tone(330,'sawtooth',0.12,0.2,0.12); },
+  briefing()      { [0,0.15,0.3].forEach((d,i)=>tone(300+i*100,'sine',0.2,0.2,d)); },
+  breach()        { [0,0.08,0.16,0.24,0.32].forEach((d,i)=>tone(220+i*60,'square',0.1,0.2,d)); },
+  sabotage()      {
+    // Dramatic alarm
+    [0,0.1,0.2,0.3,0.4,0.5].forEach(d=>tone(880,'sawtooth',0.08,0.4,d));
+    [0.05,0.15,0.25,0.35,0.45].forEach(d=>tone(660,'sawtooth',0.06,0.3,d));
+  },
+  aftermath()     { tone(880,'sine',0.06,0.4); tone(1100,'sine',0.06,0.35,0.07); tone(1320,'sine',0.08,0.3,0.14); },
+  recon()         { [523,659,784,1047].forEach((f,i)=>tone(f,'sine',0.15,0.3,i*0.12)); },
+  correct()       { [0,0.1,0.2].forEach(d=>tone(784,'sine',0.12,0.35,d)); },
+  wrong()         { tone(150,'sawtooth',0.3,0.4); tone(120,'sawtooth',0.25,0.3,0.15); },
+  tick()          { tone(800,'square',0.04,0.1); },
+  urgentTick()    { tone(1200,'square',0.05,0.2); },
+  sabotageTick()  { tone(1400,'sawtooth',0.06,0.25); tone(700,'sawtooth',0.04,0.2,0.05); },
+  freeze()        { [0,0.07,0.14,0.21].forEach(d=>tone(1200-d*800,'sine',0.06,0.2,d)); },
+  rollback()      { [0,0.08,0.16].forEach(d=>tone(440+d*300,'triangle',0.08,0.25,d)); },
+  quizCorrect()   { tone(880,'sine',0.1,0.4); tone(1100,'sine',0.1,0.35,0.1); },
+  quizWrong()     { tone(220,'sawtooth',0.15,0.3); },
+  decoderUnlock() { [440,550,660,880].forEach((f,i)=>tone(f,'sine',0.1,0.3,i*0.08)); },
+  levelUp()       { [523,659,784,1047,1319].forEach((f,i)=>tone(f,'sine',0.15,0.3,i*0.1)); },
+};
+
+// ═══════════════════════════════════════════════════════
+//  PARTICLES
+// ═══════════════════════════════════════════════════════
+function initParticles() {
+  const canvas = document.getElementById('particles-canvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+  resize();
+  window.addEventListener('resize', resize);
+  class P {
+    reset() {
+      this.x = Math.random() * canvas.width;
+      this.y = Math.random() * canvas.height;
+      this.size = Math.random() * 1.5 + 0.3;
+      this.sx = (Math.random() - 0.5) * 0.3;
+      this.sy = -Math.random() * 0.4 - 0.1;
+      this.op = Math.random() * 0.5 + 0.1;
+      this.color = Math.random()>0.85?'#e5341a':Math.random()>0.7?'#28c840':'#ffffff';
+    }
+    constructor() { this.reset(); }
+    update() { this.x+=this.sx; this.y+=this.sy; this.op-=0.0015; if(this.op<=0||this.y<-10)this.reset(); }
+    draw()   { ctx.globalAlpha=this.op; ctx.fillStyle=this.color; ctx.beginPath(); ctx.arc(this.x,this.y,this.size,0,Math.PI*2); ctx.fill(); }
+  }
+  const parts = Array.from({length:100},()=>new P());
+  (function loop(){ctx.clearRect(0,0,canvas.width,canvas.height);parts.forEach(p=>{p.update();p.draw();});requestAnimationFrame(loop);})();
+}
+
+// ═══════════════════════════════════════════════════════
+//  LOCAL STATE
+// ═══════════════════════════════════════════════════════
+let L = {
+  screen: 'login', teamName: null, isAdmin: false,
+  gameState: null, teams: {}, decisions: {}, quizAnswers: {},
+  timerLeft: 0, timerMax: 60, timerInterval: null,
+  prevPhase: null,
+  quizUnlocked: false,  // L2: quiz answered correctly
+  quizAnswered: {},     // L3: which clues answered
+  selectedTarget: null, // card modal
+  overrideTeam: null,   // score override
+  rollbackInterval: null,
+};
+
+const $ = id => document.getElementById(id);
+const key = n => String(n).replace(/[^a-zA-Z0-9_]/g, '_');
+const onlineTeams  = () => Object.values(L.teams).filter(t=>t.online).sort((a,b)=>a.name.localeCompare(b.name));
+const leaderboard  = () => Object.values(L.teams).filter(t=>t.online).sort((a,b)=>(b.score||0)-(a.score||0));
+const allTeams     = () => Object.values(L.teams).sort((a,b)=>a.name.localeCompare(b.name));
+const myTeam       = () => L.teams[key(L.teamName)] || null;
+const getScenario  = (level,idx) => SCENARIOS.filter(s=>s.level===level)[idx]||null;
+
+// ═══════════════════════════════════════════════════════
+//  SOCKET EVENTS
+// ═══════════════════════════════════════════════════════
+socket.on('connect',    () => { setConnIndicators(true); });
+socket.on('disconnect', () => { setConnIndicators(false); });
+
+socket.on('gameState', data => {
+  const prevPhase = L.gameState ? L.gameState.phase : null;
+  L.gameState   = data.state       || {};
+  L.teams       = data.teams       || {};
+  L.decisions   = data.decisions   || {};
+  L.quizAnswers = data.quizAnswers  || {};
+
+  // Phase change sounds + animations
+  if (prevPhase !== L.gameState.phase) {
+    handlePhaseChange(prevPhase, L.gameState.phase);
+  }
+  rerender();
+});
+
+socket.on('phase', ({ phase, duration, message }) => {
+  showPhaseOverlay(phase, message);
+});
+
+socket.on('timerTick', ({ left, max, phase }) => {
+  L.timerLeft = left; L.timerMax = max;
+  updateTimerUI(left, max, phase || L.gameState?.phase);
+});
+
+function handlePhaseChange(from, to) {
+  console.log(`Phase: ${from} → ${to}`);
+  switch(to) {
+    case 'BRIEFING':
+      SFX.briefing();
+      showPhaseOverlay('BRIEFING', 'Incoming transmission…');
+      document.body.classList.remove('sabotage-pulse');
+      break;
+    case 'BREACH':
+      SFX.breach();
+      showPhaseOverlay('BREACH', 'Decision window open — Deploy or Delay?');
+      document.body.classList.remove('sabotage-pulse');
+      L.quizUnlocked = false;
+      L.quizAnswered = {};
+      break;
+    case 'SABOTAGE_PULSE':
+      SFX.sabotage();
+      showPhaseOverlay('SABOTAGE_PULSE', '⚠ SABOTAGE PULSE — Cards unlocked!', 'red');
+      document.body.classList.add('sabotage-pulse');
+      break;
+    case 'AFTERMATH':
+      SFX.aftermath();
+      showPhaseOverlay('AFTERMATH', 'Results incoming…', 'amber');
+      document.body.classList.remove('sabotage-pulse');
+      startRollbackWindow();
+      break;
+    case 'RECON':
+      SFX.recon();
+      showPhaseOverlay('RECON', 'Leaderboard updating…', 'amber');
+      stopRollbackWindow();
+      break;
+    case 'LOBBY':
+      document.body.classList.remove('sabotage-pulse');
+      stopRollbackWindow();
+      break;
+  }
+}
+
+function showPhaseOverlay(phase, sub = '', colorClass = '') {
+  const overlay = $('phase-overlay');
+  const name    = $('phase-overlay-name');
+  const label   = $('phase-overlay-label');
+  const subEl   = $('phase-overlay-sub');
+
+  const phaseNames = {
+    BRIEFING:       'THE BRIEFING',
+    BREACH:         'BREACH WINDOW',
+    SABOTAGE_PULSE: 'SABOTAGE PULSE',
+    AFTERMATH:      'THE AFTERMATH',
+    RECON:          'RECON',
+    LOBBY:          'STANDBY',
+  };
+
+  label.textContent = 'PHASE INITIATED';
+  name.textContent  = phaseNames[phase] || phase;
+  name.className    = 'phase-overlay-name ' + colorClass;
+  subEl.textContent = sub;
+
+  overlay.classList.add('active');
+  setTimeout(() => overlay.classList.remove('active'), 2500);
+}
+
+function setConnIndicators(ok) {
+  ['team-conn-indicator','admin-conn-indicator','proj-conn-indicator'].forEach(id => {
+    const el = $(id); if (!el) return;
+    el.className = 'conn-indicator ' + (ok ? 'connected' : 'disconnected');
+  });
+}
+
+// ═══════════════════════════════════════════════════════
+//  TIMER
+// ═══════════════════════════════════════════════════════
+function updateTimerUI(left, max, phase) {
+  const pct    = Math.max(0, (left / max) * 100);
+  const isSab  = phase === 'SABOTAGE_PULSE';
+  const color  = isSab ? 'var(--red)' : left<=5 ? 'var(--red)' : left<=10 ? 'var(--amber)' : 'var(--green)';
+  const urgent = left <= 10 || isSab;
+
+  ['admin-timer-bar','team-timer-bar','proj-timer-fill'].forEach(id=>{
+    const el=$(id);if(!el)return;el.style.width=pct+'%';el.style.background=color;
+  });
+
+  const atb = $('admin-timer-big');
+  if(atb){atb.textContent=left;atb.className='big-timer'+(urgent?' urgent':'');}
+
+  const pt = $('proj-timer');
+  if(pt){pt.textContent=left||'—';pt.className='proj-timer'+(urgent?' urgent':'');}
+
+  const pl = $('proj-phase-label');
+  if(pl) pl.textContent = isSab ? '⚠ SABOTAGE PULSE' : phase==='BREACH' ? 'BREACH WINDOW' : '';
+
+  const ttn = $('team-timer-text');
+  if(ttn){ttn.textContent=left;ttn.className='ctf-timer-num'+(urgent?' urgent':'');}
+
+  const ring=$('ctf-ring');
+  if(ring){
+    const c=326.73;
+    ring.style.strokeDashoffset=c-(pct/100)*c;
+    ring.className='ctf-ring-fill'+(urgent?' urgent':'');
+    if(isSab) ring.style.stroke='var(--red)';
+  }
+
+  // Status text
+  const statusText = $('ctf-status-text');
+  const statusDot  = $('ctf-status-dot');
+  const barLabel   = $('ctf-bar-label');
+  const hint       = $('ctf-timer-hint');
+  if(isSab){
+    if(statusText) statusText.textContent = '⚠ SABOTAGE PULSE';
+    if(statusDot)  statusDot.style.background = 'var(--red)';
+    if(barLabel)   barLabel.textContent = 'CARD WINDOW CLOSING';
+    if(hint)       hint.innerHTML = 'Use your cards NOW — window closes in <span style="color:var(--red)">' + left + 's</span>';
+  } else {
+    if(statusText) statusText.textContent = 'BREACH WINDOW';
+    if(statusDot)  statusDot.style.background = '#28c840';
+    if(barLabel)   barLabel.textContent = 'TIME REMAINING';
+    if(hint)       hint.innerHTML = 'Submit before time runs out or lose <span style="color:var(--red)">−1 pt</span>';
+  }
+
+  // Admin phase indicator
+  const api = $('admin-phase-indicator');
+  if(api){
+    api.textContent  = phase || '—';
+    api.style.color  = isSab ? 'var(--red)' : phase==='BREACH' ? 'var(--green)' : 'var(--muted)';
+    api.style.background = isSab ? 'rgba(229,52,26,0.1)' : '';
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+//  ROLLBACK WINDOW (7 seconds flashing)
+// ═══════════════════════════════════════════════════════
+function startRollbackWindow() {
+  const team = myTeam(); if (!team) return;
+  const gs   = L.gameState; if (!gs) return;
+  const s    = getScenario(gs.currentLevel, gs.currentScenarioIdx);
+  if (!s) return;
+
+  const myDec = L.decisions[key(L.teamName)];
+  const cards = team.cards || {};
+  if (myDec !== 'deploy' || myDec === s.answer || cards.rollback === false) return;
+
+  const rollbackBtn = $('rollback-btn');
+  if (!rollbackBtn) return;
+  rollbackBtn.style.display = 'block';
+
+  let timeLeft = 7;
+  const timerSpan = $('rollback-timer');
+  if(timerSpan) timerSpan.textContent = `(${timeLeft}s)`;
+
+  SFX.rollback();
+
+  L.rollbackInterval = setInterval(() => {
+    timeLeft--;
+    if(timerSpan) timerSpan.textContent = `(${timeLeft}s)`;
+    if (timeLeft <= 0) {
+      stopRollbackWindow();
+    }
+  }, 1000);
+}
+
+function stopRollbackWindow() {
+  clearInterval(L.rollbackInterval);
+  const btn = $('rollback-btn');
+  if (btn) btn.style.display = 'none';
+}
+
+// ═══════════════════════════════════════════════════════
+//  SCREEN MANAGEMENT
+// ═══════════════════════════════════════════════════════
+function setScreen(id) {
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  $(id).classList.add('active');
+  L.screen = id.replace('-screen','');
+}
+function showLogin()     { setScreen('login-screen'); }
+function showTeam()      { setScreen('team-screen');      rerender(); }
+function showAdmin()     { L.isAdmin=true; setScreen('admin-screen'); rerender(); }
+function showProjector() { setScreen('projector-screen'); rerender(); }
+function showProjectorFromAdmin() { showProjector(); }
+function showAdminFromProjector() { if(L.isAdmin) showAdmin(); else promptAdmin(); }
+
+function rerender() {
+  switch(L.screen) {
+    case 'team':      renderTeam();      break;
+    case 'admin':     renderAdmin();     break;
+    case 'projector': renderProjector(); break;
+  }
+}
+
+function logout() {
+  socket.emit('logout');
+  L.teamName = null; L.isAdmin = false;
+  document.body.classList.remove('sabotage-pulse');
+  showLogin();
+}
+
+// ═══════════════════════════════════════════════════════
+//  AUTH
+// ═══════════════════════════════════════════════════════
+function promptAdmin() {
+  const p = prompt('Enter Admin password:'); if (!p) return;
+  socket.emit('adminAuth', { pass:p }, res => {
+    if (res.ok) showAdmin(); else alert('Wrong password.');
+  });
+}
+function promptProjector() {
+  const p = prompt('Enter Projector password:'); if (!p) return;
+  socket.emit('projectorAuth', { pass:p }, res => {
+    if (res.ok) showProjector(); else alert('Wrong password.');
+  });
+}
+function doLogin() {
+  const name = $('login-team').value.trim();
+  const pass = $('login-pass').value.trim();
+  if (!name || !pass) return;
+  socket.emit('login', { name, pass }, res => {
+    if (res.ok) {
+      SFX.breach();
+      L.teamName = res.name;
+      $('login-err').style.display = 'none';
+      showTeam();
+    } else {
+      SFX.wrong();
+      $('login-err').style.display = 'flex';
+      $('login-team').style.borderColor = 'var(--red)';
+      setTimeout(()=>{ $('login-team').style.borderColor=''; }, 1500);
+    }
+  });
+}
+
+// ═══════════════════════════════════════════════════════
+//  TEAM DASHBOARD
+// ═══════════════════════════════════════════════════════
+function renderTeam() {
+  if (L.screen !== 'team') return;
+  const team = myTeam(); if (!team) return;
+  const gs   = L.gameState || {};
+  const phase = gs.phase || 'LOBBY';
+  const s     = getScenario(gs.currentLevel, gs.currentScenarioIdx);
+
+  $('team-name-badge').textContent = team.name;
+  const pb = $('phase-badge');
+  pb.textContent = phase;
+  pb.className = 'nav-badge ' + (
+    phase==='BREACH'?'green':phase==='SABOTAGE_PULSE'?'red':phase==='AFTERMATH'||phase==='RECON'?'amber':''
+  );
+  $('nav-round-info').textContent = s ? `Level ${s.level} · ${s.levelName} · Round ${s.round}` : '';
+
+  // Phase banner
+  const banner = $('phase-banner');
+  if (phase !== 'LOBBY') {
+    banner.style.display = 'block';
+    banner.className = 'phase-banner ' + phase;
+    const bannerText = {
+      BRIEFING:       '📡 THE BRIEFING — Read the mission carefully',
+      BREACH:         '⚡ BREACH WINDOW — Submit your decision',
+      SABOTAGE_PULSE: '💀 SABOTAGE PULSE — Use your cards NOW',
+      AFTERMATH:      '📊 THE AFTERMATH — Results revealed',
+      RECON:          '🏆 RECON — Leaderboard updating',
+    };
+    banner.textContent = bannerText[phase] || phase;
+  } else {
+    banner.style.display = 'none';
+  }
+
+  // Score + rank
+  $('team-score-disp').textContent = team.score || 0;
+  const lb   = leaderboard();
+  const rank = lb.findIndex(t=>t.name===team.name)+1;
+  $('team-rank-disp').innerHTML = `Rank <b style="color:var(--amber)">#${rank}</b> / ${lb.length}`;
+
+  renderCards(team, phase);
+  renderHistory(team);
+  renderTeamScenario(team, s, phase);
+}
+
+function renderCards(team, phase) {
+  const c      = team.cards || { rollback:true, freeze:true, doublerisk:true };
+  const inSab  = phase === 'SABOTAGE_PULSE';
+  const inBreach = phase === 'BREACH';
+  const canUseCards = inSab || inBreach;
+
+  const note = $('cards-phase-note');
+  if (note) {
+    if (inSab)    { note.textContent='⚠ SABOTAGE PULSE ACTIVE — Use cards now!'; note.style.color='var(--red)'; note.style.borderColor='rgba(229,52,26,0.3)'; }
+    else if (inBreach) { note.textContent='Cards available during Sabotage Pulse (last 15s)'; note.style.color='var(--muted)'; note.style.borderColor=''; }
+    else          { note.textContent='Cards unlock during Sabotage Pulse'; note.style.color='var(--dim)'; note.style.borderColor=''; }
+  }
+
+  const cards = [
+    { key:'freeze',     name:'❄ FREEZE',     desc:'Lock a team out next round', color:'var(--blue)' },
+    { key:'doublerisk', name:'⚡ DOUBLE RISK', desc:'Target takes -8 if wrong',  color:'var(--red)'  },
+    { key:'rollback',   name:'⏪ ROLLBACK',    desc:'Reduce penalty to -2',      color:'var(--green)'},
+  ];
+  let unused = 0;
+  $('team-cards-list').innerHTML = cards.map(card => {
+    const avail = c[card.key] !== false;
+    if (avail) unused++;
+    const canUse = avail && canUseCards && card.key !== 'rollback';
+    return `<div class="card-item ${card.key} ${avail?'':'used'}">
+      <div>
+        <div class="card-name" style="color:${card.color}">${card.name}</div>
+        <div class="card-desc">${avail ? card.desc : '— USED —'}</div>
+      </div>
+      ${canUse ? `<button class="btn-use-card" onclick="openCardModal('${card.key}')">USE</button>` : ''}
+    </div>`;
+  }).join('');
+  $('unused-warning').style.display = unused>0 ? 'block' : 'none';
+}
+
+function renderHistory(team) {
+  const hist = team.history || [];
+  $('team-history').innerHTML = hist.length
+    ? [...hist].reverse().map(h=>`<div class="history-row">
+        <span>Rd ${h.round} — ${h.decision.toUpperCase()}</span>
+        <span class="history-pts ${h.pts>0?'pos':'neg'}">${h.pts>0?'+':''}${h.pts}</span>
+      </div>`).join('')
+    : '<div style="color:var(--dim);font-size:11px">No rounds yet.</div>';
+}
+
+function renderTeamScenario(team, s, phase) {
+  $('frozen-banner').style.display   = team.frozen   ? 'flex' : 'none';
+  $('targeted-banner').style.display = team.targeted ? 'flex' : 'none';
+  $('result-banner').style.display   = 'none';
+
+  // Hide all level-specific panels first
+  ['image-quiz-panel','forensic-panel','decoder-panel'].forEach(id=>$(id).style.display='none');
+  // Remove scenario diagram if present
+  const existingDiagram = document.getElementById('scenario-diagram');
+  if (existingDiagram && s && s.type !== 'image_quiz') existingDiagram.remove();
+
+  const timerRow = $('timer-row');
+  const decRow   = $('decision-row');
+
+  if (phase === 'LOBBY' || !s) {
+    timerRow.style.display = 'none'; decRow.style.display = 'none';
+    $('scenario-display').innerHTML = `<div class="scenario-waiting">
+      <div class="waiting-animation"><div class="waiting-line"></div><div class="waiting-line"></div><div class="waiting-line"></div></div>
+      <p>Awaiting mission briefing…</p><p class="dim">$ standby for incoming transmission_</p></div>`;
+    return;
+  }
+
+  // Show scenario text + images
+  $("scenario-display").classList.add("active");
+  const imgsHtml = (s.images && s.images.length)
+    ? s.images.map(img=>`<img src="${img}" class="scenario-img" alt="scenario" onerror="this.style.display='none'" />`).join("")
+    : "";
+  $("scenario-display").innerHTML = `
+    <div class="scenario-level-tag">LEVEL ${s.level} · ${s.levelName.toUpperCase()} · ROUND ${s.round}</div>
+    <div class="scenario-title">${s.title}</div>
+    ${imgsHtml ? '<div class="scenario-images">' + imgsHtml + '</div>' : ""}
+    <div class="scenario-body">${s.body}</div>`;
+  const inActive = phase === 'BREACH' || phase === 'SABOTAGE_PULSE';
+  timerRow.style.display = inActive ? 'flex' : 'none';
+
+  if (phase === 'BRIEFING') {
+    decRow.style.display = 'none';
+    return;
+  }
+
+  if (inActive) {
+    // Render level-specific interaction
+    if (s.type === "text" || s.type === "image_scenario" || s.type === "story_hunt") {
+      renderTextLevel(team, s, phase);
+    } else if (s.type === "image_quiz") {
+      renderImageQuizLevel(team, s, phase);
+    } else if (s.type === "forensic_trail") {
+      renderForensicLevel(team, s, phase);
+    } else if (s.type === "decoder" || s.type === "caesar_cipher") {
+      renderDecoderLevel(team, s, phase);
+    }
+  }
+
+  if (phase === 'AFTERMATH' || phase === 'RECON') {
+    decRow.style.display = 'none';
+    renderResults(team, s);
+  }
+}
+
+function renderTextLevel(team, s, phase) {
+  if (team.frozen) { $('decision-row').style.display='none'; return; }
+  $('decision-row').style.display = 'grid';
+  const myDec = L.decisions[key(L.teamName)];
+  $('btn-deploy').className = 'btn-decision btn-deploy'+(myDec==='deploy'?' selected':'');
+  $('btn-delay').className  = 'btn-decision btn-delay' +(myDec==='delay' ?' selected':'');
+  $('btn-deploy').disabled  = !!myDec;
+  $('btn-delay').disabled   = !!myDec;
+}
+
+function renderImageQuizLevel(team, s, phase) {
+  const myDec = L.decisions[key(L.teamName)];
+  // Show quiz panel
+  const panel = $('image-quiz-panel');
+  panel.style.display = 'block';
+
+  // Render the diagram image/SVG inside scenario card
+  if (s.imageUrl) {
+    const existing = document.getElementById('scenario-diagram');
+    if (!existing) {
+      const imgWrap = document.createElement('div');
+      imgWrap.id = 'scenario-diagram';
+      imgWrap.style.cssText = 'margin:12px 0;border:0.5px solid #1a2e10;border-radius:4px;overflow:hidden;background:#060d04;';
+      const img = document.createElement('img');
+      img.src = s.imageUrl;
+      img.alt = s.imageAlt || 'System diagram';
+      img.style.cssText = 'width:100%;display:block;';
+      imgWrap.appendChild(img);
+      // Insert before quiz panel
+      panel.parentNode.insertBefore(imgWrap, panel);
+    }
+  }
+
+  const myQuiz     = (L.quizAnswers[key(L.teamName)] || {});
+  const answered   = myQuiz.quiz !== undefined;
+  const isCorrect  = answered && myQuiz.quiz === s.quiz.correct;
+
+  $('image-quiz-options').innerHTML = s.quiz.options.map((opt, i) => {
+    let cls = 'quiz-option';
+    if (answered) {
+      if (i === s.quiz.correct)  cls += ' selected-correct';
+      else if (i === myQuiz.quiz && !isCorrect) cls += ' selected-wrong';
+      cls += ' disabled';
+    }
+    return `<div class="${cls}" onclick="submitQuizAnswer('quiz', ${i})">
+      <span class="quiz-option-key">${String.fromCharCode(65+i)}</span> ${opt}
+    </div>`;
+  }).join('');
+
+  const fb = $('image-quiz-feedback');
+  if (answered) {
+    fb.className = 'quiz-feedback ' + (isCorrect?'correct':'wrong');
+    fb.textContent = isCorrect ? '✓ Correct! Deploy/Delay buttons unlocked.' : '✗ Wrong — Deploy/Delay still locked.';
+  } else {
+    fb.className = 'quiz-feedback'; fb.textContent = '';
+  }
+
+  // Unlock deploy/delay only if quiz correct
+  if (isCorrect && !myDec && !team.frozen) {
+    $('decision-row').style.display = 'grid';
+    $('btn-deploy').disabled = false; $('btn-delay').disabled = false;
+  } else if (myDec) {
+    $('decision-row').style.display = 'grid';
+    $('btn-deploy').className = 'btn-decision btn-deploy'+(myDec==='deploy'?' selected':'');
+    $('btn-delay').className  = 'btn-decision btn-delay' +(myDec==='delay'?' selected':'');
+    $('btn-deploy').disabled = true; $('btn-delay').disabled = true;
+  } else {
+    $('decision-row').style.display = 'none';
+  }
+}
+
+function renderForensicLevel(team, s, phase) {
+  const panel     = $('forensic-panel');
+  const cluesDiv  = $('forensic-clues');
+  panel.style.display = 'block';
+
+  const myQuiz = L.quizAnswers[key(L.teamName)] || {};
+  let allSolved = true;
+
+  cluesDiv.innerHTML = s.clues.map((clue, i) => {
+    const prevSolved  = i === 0 || myQuiz[`clue_${i-1}`] !== undefined;
+    const myAnswer    = myQuiz[`clue_${i}`];
+    const answered    = myAnswer !== undefined;
+    const correct     = answered && myAnswer === clue.correct;
+    if (!answered) allSolved = false;
+
+    const statusBadge = answered
+      ? (correct ? '<span class="clue-solved">+'+clue.points+' pts ✓</span>' : '<span style="color:var(--red)">✗</span>')
+      : '<span class="clue-pts">+'+clue.points+' pts</span>';
+
+    const options = prevSolved ? clue.options.map((opt, j) => {
+      let cls = 'forensic-option';
+      if (answered) {
+        if (j === clue.correct) cls += ' correct';
+        else if (j === myAnswer) cls += ' wrong';
+        cls += ' locked';
+      }
+      return `<div class="${cls}" onclick="submitQuizAnswer('clue_${i}', ${j})">${opt}</div>`;
+    }).join('') : '<div style="color:var(--dim);font-size:11px;padding:8px">Complete previous clue to unlock</div>';
+
+    return `<div class="forensic-clue ${answered?(correct?'solved':'unlocked'):(prevSolved?'unlocked':'')}">
+      <div class="forensic-clue-header">
+        <span>${clue.label}</span>${statusBadge}
+      </div>
+      ${prevSolved ? `<div class="forensic-clue-body">
+        <div class="forensic-clue-text">${clue.text}</div>
+        <div class="forensic-clue-question">${clue.question}</div>
+        <div class="forensic-options">${options}</div>
+      </div>` : ''}
+    </div>`;
+  }).join('');
+
+  // Show Deploy/Delay after all clues
+  const myDec = L.decisions[key(L.teamName)];
+  if (allSolved && !team.frozen) {
+    $('decision-row').style.display = 'grid';
+    const dec = myDec;
+    $('btn-deploy').className = 'btn-decision btn-deploy'+(dec==='deploy'?' selected':'');
+    $('btn-delay').className  = 'btn-decision btn-delay' +(dec==='delay' ?' selected':'');
+    $('btn-deploy').disabled  = !!dec; $('btn-delay').disabled = !!dec;
+  } else if (myDec) {
+    $('decision-row').style.display = 'grid';
+    $('btn-deploy').className = 'btn-decision btn-deploy'+(myDec==='deploy'?' selected':'');
+    $('btn-delay').className  = 'btn-decision btn-delay' +(myDec==='delay'?' selected':'');
+    $('btn-deploy').disabled = true; $('btn-delay').disabled = true;
+  } else {
+    $('decision-row').style.display = 'none';
+  }
+}
+
+function renderDecoderLevel(team, s, phase) {
+  const panel = $('decoder-panel');
+  panel.style.display = 'block';
+
+  $('decoder-encoded').textContent = s.encodedText || '';
+  $('decoder-shift').textContent   = s.shiftValue || '3';
+  $('decoder-hint').textContent    = '💡 Hint: ' + (s.hint || 'Caesar Cipher — shift back by the shown number');
+  const ctx = $('decoder-context');
+  if (ctx) {
+    if (s.contextualExplanation) {
+      ctx.style.display = 'block';
+      ctx.textContent = '📋 Context: ' + s.contextualExplanation;
+    } else {
+      ctx.style.display = 'none';
+    }
+  }
+
+  const myQuiz   = L.quizAnswers[key(L.teamName)] || {};
+  const decoded  = myQuiz.decoder;
+  const answered = !!decoded;
+  const correct  = answered && decoded.correct;
+
+  const fb = $('decoder-feedback');
+  const input = $('decoder-text');
+
+  if (answered) {
+    fb.className   = 'decoder-feedback ' + (correct?'correct':'wrong');
+    fb.textContent = correct ? '✓ Decoded correctly! Deploy/Delay unlocked.' : `✗ Incorrect. Try again. Submitted: "${decoded.text}"`;
+    if (!correct) {
+      // allow retry
+      input.disabled = false;
+    } else {
+      input.disabled = true;
+    }
+  } else {
+    fb.className = ''; fb.textContent = '';
+    input.disabled = false;
+  }
+
+  // Show deploy/delay if decoded correctly
+  const myDec = L.decisions[key(L.teamName)];
+  if (correct && !team.frozen) {
+    $('decision-row').style.display = 'grid';
+    $('btn-deploy').className = 'btn-decision btn-deploy'+(myDec==='deploy'?' selected':'');
+    $('btn-delay').className  = 'btn-decision btn-delay' +(myDec==='delay'?' selected':'');
+    $('btn-deploy').disabled = !!myDec; $('btn-delay').disabled = !!myDec;
+  } else if (myDec) {
+    $('decision-row').style.display = 'grid';
+    $('btn-deploy').disabled = true; $('btn-delay').disabled = true;
+  } else {
+    $('decision-row').style.display = 'none';
+  }
+}
+
+function renderResults(team, s) {
+  const myDec = L.decisions[key(L.teamName)];
+  if (team.frozen) {
+    showBanner('wrong','❄ You were frozen this round. No points.');
+  } else if (!myDec) {
+    showBanner('wrong',`⏱ No decision — −1 pt. Correct: ${s.answer.toUpperCase()}`);
+  } else if (myDec === s.answer) {
+    const outcome = s.delayOutcome && myDec==='delay' ? s.delayOutcome : (s.deployOutcome && myDec==='deploy' ? s.deployOutcome : '');
+    showBanner('correct',`✓ CORRECT! +6 pts.${outcome ? ' ' + outcome : ''}`);
+    SFX.correct();
+  } else {
+    const pen = team.targeted ? -8 : -5;
+    const outcome = s.delayOutcome && myDec==='deploy' ? '⚠ ' + s.deployOutcome : (s.delayOutcome && myDec==='delay' ? s.delayOutcome : '');
+    showBanner('wrong',`✗ WRONG! ${pen} pts. Correct: ${s.answer.toUpperCase()}. ${s.explanation||''}`);
+    SFX.wrong();
+  }
+  // Show learning point if available
+  if (s.learning) {
+    const b = $('result-banner');
+    b.innerHTML += `<br><span style="color:var(--amber);font-size:11px;margin-top:6px;display:block">🎯 ${s.learning}</span>`;
+  }
+}
+
+function showBanner(type, msg) {
+  const b = $('result-banner');
+  b.style.display = 'flex'; b.className = 'status-banner '+type;
+  b.innerHTML = `<span class="blink-dot ${type==='correct'?'green':'red'}"></span>${msg}`;
+}
+
+function submitDecision(choice) {
+  const team = myTeam(); if (!team||team.frozen) return;
+  const gs = L.gameState; if (!gs||gs.phase!=='BREACH') return;
+  if (L.decisions[key(L.teamName)]) return;
+  SFX[choice]();
+  socket.emit('submitDecision',{decision:choice},res=>{if(!res.ok)alert(res.error);});
+}
+
+function submitQuizAnswer(clueId, answerIdx) {
+  const myQuiz = L.quizAnswers[key(L.teamName)] || {};
+  if (myQuiz[clueId] !== undefined) return; // already answered
+  socket.emit('submitQuizAnswer',{clueId,answerIdx},res=>{
+    if (res.ok) {
+      if (res.correct) SFX.quizCorrect();
+      else SFX.quizWrong();
+    }
+  });
+}
+
+function submitDecoderAnswer() {
+  const text = $('decoder-text').value.trim();
+  if (!text) return;
+  socket.emit('submitDecoderAnswer',{decodedText:text},res=>{
+    if (res.ok) {
+      if (res.correct) SFX.decoderUnlock();
+      else SFX.quizWrong();
+    }
+  });
+}
+
+function useRollback() {
+  socket.emit('useRollback', res=>{
+    if (res.ok) {
+      stopRollbackWindow();
+      showBanner('wrong','⏪ ROLLBACK! Penalty reduced to −2 pts.');
+      SFX.rollback();
+    } else { alert(res.error); }
+  });
+}
+
+// ═══════════════════════════════════════════════════════
+//  CARD MODAL — 55-cell targeting grid
+// ═══════════════════════════════════════════════════════
+let pendingCard = null;
+L.selectedTarget = null;
+
+function openCardModal(cardType) {
+  const gs = L.gameState;
+  if (!gs || (gs.phase !== 'SABOTAGE_PULSE' && gs.phase !== 'BREACH')) {
+    alert('Cards are only available during the Sabotage Pulse!'); return;
+  }
+  SFX.click();
+  pendingCard = cardType;
+  L.selectedTarget = null;
+  $('modal-title').textContent = cardType==='freeze' ? '❄ FREEZE — Select Target' : '⚡ DOUBLE RISK — Select Target';
+  $('modal-sub').textContent   = cardType==='freeze'
+    ? 'Target team is locked out of the entire next round.'
+    : 'If target answers wrong, they lose −8 pts instead of −5.';
+
+  // Build 55-cell targeting grid
+  const others = onlineTeams().filter(t=>t.name!==L.teamName);
+  $('targeting-grid').innerHTML = others.map(t => {
+    let cls = 'target-cell';
+    if (t.frozen)   cls += ' frozen';
+    if (t.targeted) cls += ' targeted';
+    return `<div class="${cls}" data-name="${t.name}" onclick="selectTarget('${t.name}')">
+      <div class="target-cell-name">${t.name}</div>
+      <div class="target-cell-status">${t.frozen?'❄ FROZEN':t.targeted?'⚡ TARGETED':''}</div>
+    </div>`;
+  }).join('');
+
+  $('modal-confirm-btn').disabled = true;
+  $('card-modal').classList.add('open');
+}
+
+function selectTarget(name) {
+  L.selectedTarget = name;
+  document.querySelectorAll('.target-cell').forEach(el => {
+    el.classList.toggle('selected', el.dataset.name === name);
+  });
+  $('modal-confirm-btn').disabled = false;
+}
+
+function closeModal() { $('card-modal').classList.remove('open'); pendingCard=null; L.selectedTarget=null; }
+
+function confirmCard() {
+  if (!L.selectedTarget) return;
+  socket.emit('useCard',{cardType:pendingCard,targetName:L.selectedTarget},res=>{
+    if (res.ok) { if(pendingCard==='freeze') SFX.freeze(); else SFX.click(); closeModal(); }
+    else alert(res.error);
+  });
+}
+
+// ═══════════════════════════════════════════════════════
+//  ADMIN PANEL
+// ═══════════════════════════════════════════════════════
+function renderAdmin() {
+  if (L.screen !== 'admin') return;
+  const gs    = L.gameState || {};
+  const phase = gs.phase || 'LOBBY';
+  const s     = getScenario(gs.currentLevel, gs.currentScenarioIdx);
+
+  const pill = $('admin-state-pill');
+  if (pill) { pill.textContent=phase; pill.className='admin-state-pill '+phase; }
+
+  const inRound = phase==='BREACH'||phase==='SABOTAGE_PULSE'||phase==='BRIEFING';
+  $('btn-start-round').disabled = inRound;
+  $('btn-reveal').disabled      = !inRound && phase!=='BRIEFING';
+  $('btn-next').disabled        = phase!=='RECON'&&phase!=='AFTERMATH';
+
+  const ad = $('admin-answer-display');
+  if (s && (phase==='AFTERMATH'||phase==='RECON')) {
+    ad.className=`answer-${s.answer}`; ad.textContent=s.answer.toUpperCase()+' — '+s.explanation;
+  } else { ad.className='answer-hidden'; ad.textContent='Hidden until reveal'; }
+
+  // Levels
+  const names = ['The Deployment Trenches',"The Architect's Anatomy",'Digital Forensic Trail','The BlackBox Protocol'];
+  $('level-list').innerHTML = [1,2,3,4].map(l=>`
+    <button class="level-btn ${gs.currentLevel===l?'active':''}" onclick="adminSelectLevel(${l})">
+      <span class="level-num">${l}</span><span class="level-name">${names[l-1]}</span>
+    </button>`).join('');
+
+  // Scenarios
+  const curLevel = gs.currentLevel||1;
+  const curIdx   = gs.currentScenarioIdx||0;
+  const list     = SCENARIOS.filter(sc=>sc.level===curLevel);
+  $('scenario-list').innerHTML = list.map((sc,i)=>`
+    <button class="scenario-btn ${curIdx===i?'active':''}" onclick="adminSelectScenario(${i})">
+      <div class="scenario-btn-num">Rd ${sc.round} · ${sc.type.toUpperCase()}</div>
+      <div class="scenario-btn-title">${sc.title.substring(0,36)}…</div>
+    </button>`).join('');
+
+  if (s) { $('admin-scenario-preview').textContent=s.body; $('admin-scenario-preview').className='scenario-preview-text'; }
+
+  // Decisions
+  const online = onlineTeams();
+  const voted  = online.filter(t=>L.decisions[key(t.name)]).length;
+  $('voted-count').textContent = voted;
+  $('total-count').textContent = online.filter(t=>!t.frozen).length;
+  $('admin-decisions').innerHTML = online.map(t=>{
+    const dec=L.decisions[key(t.name)];
+    return `<div class="admin-decision-row">
+      <span class="dec-team-name">${t.name}</span>
+      <span class="${t.frozen?'':'dec-choice-'+(dec||'pending')}">${t.frozen?'❄ FROZEN':dec?dec.toUpperCase():'pending…'}</span>
+      <span class="dec-score-val ${(t.score||0)>=0?'pos':'neg'}">${(t.score||0)>=0?'+':''}${t.score||0}</span>
+    </div>`;
+  }).join('');
+
+  // All teams (with override + unfreeze)
+  $('admin-teams-list').innerHTML = allTeams().map(t=>{
+    const c=t.cards||{};
+    return `<div class="team-admin-row" onclick="openOverrideModal('${t.name}',${t.score||0})">
+      <div class="team-admin-name">${t.name}
+        <span class="card-dots">
+          <span class="card-dot ${c.rollback!==false?'active-rollback':'used'}"></span>
+          <span class="card-dot ${c.freeze!==false?'active-freeze':'used'}"></span>
+          <span class="card-dot ${c.doublerisk!==false?'active-doublerisk':'used'}"></span>
+        </span>
+      </div>
+      <div class="team-admin-meta">
+        ${t.online?'<span style="color:var(--green)">● online</span>':'<span style="color:var(--dim)">○ offline</span>'}
+        · ${(t.score||0)>=0?'+':''}${t.score||0} pts
+        ${t.frozen?`· <button class="btn-ctrl blue" style="padding:2px 8px;font-size:10px" onclick="event.stopPropagation();unfreezeTeam('${t.name}')">Unfreeze</button>`:''}
+      </div>
+    </div>`;
+  }).join('');
+
+  // Leaderboard
+  $('admin-leaderboard').innerHTML = leaderboard().map((t,i)=>{
+    const rc=i===0?'gold':i===1?'silver':i===2?'bronze':'';
+    return `<div class="lb-row-admin">
+      <div class="lb-rank ${rc}">${i+1}</div>
+      <div class="lb-name-admin">${t.name}</div>
+      <div class="lb-score-admin ${(t.score||0)>=0?'pos':'neg'}">${(t.score||0)>=0?'+':''}${t.score||0}</div>
+    </div>`;
+  }).join('');
+}
+
+function adminSelectLevel(l){
+  const gs=L.gameState;
+  if(gs&&['BREACH','SABOTAGE_PULSE','BRIEFING'].includes(gs.phase)) return;
+  SFX.click();
+  socket.emit('selectLevel',{level:l},res=>{if(!res.ok)alert(res.error);});
+}
+function adminSelectScenario(i){
+  const gs=L.gameState;
+  if(gs&&['BREACH','SABOTAGE_PULSE','BRIEFING'].includes(gs.phase)) return;
+  SFX.click();
+  socket.emit('selectScenario',{idx:i},res=>{if(!res.ok)alert(res.error);});
+}
+function startRound()  { socket.emit('startRound',res=>{if(!res.ok)alert(res.error);}); }
+function revealAnswer(){ socket.emit('revealAnswer',res=>{if(!res.ok)alert(res.error);}); }
+function nextRound()   { socket.emit('nextRound',res=>{if(!res.ok)alert(res.error);}); }
+function forceReady()  { socket.emit('forceReady',res=>{if(!res.ok)alert(res.error);}); }
+function resetGame() {
+  if(!confirm('Reset the entire game?')) return;
+  if(!confirm('Are you sure? Cannot be undone.')) return;
+  SFX.wrong();
+  socket.emit('resetGame',res=>{if(res.ok)alert('Game reset!');else alert(res.error);});
+}
+function unfreezeTeam(name) {
+  socket.emit('unfreezeTeam',{teamName:name},res=>{if(!res.ok)alert(res.error);});
+}
+
+// Score override
+function openOverrideModal(name, score) {
+  L.overrideTeam = name;
+  $('override-team-label').textContent = `Override score for: ${name} (current: ${score>=0?'+':''}${score})`;
+  $('override-score-input').value = score;
+  $('override-modal').classList.add('open');
+}
+function closeOverrideModal() { $('override-modal').classList.remove('open'); L.overrideTeam=null; }
+function confirmOverride() {
+  const score = parseInt($('override-score-input').value, 10);
+  if (isNaN(score)) return;
+  socket.emit('overrideScore',{teamName:L.overrideTeam,score},res=>{
+    if (res.ok) { closeOverrideModal(); SFX.click(); }
+    else alert(res.error);
+  });
+}
+
+// Team management
+function openAddTeamModal() { renderModalTeamList(); $('add-team-modal').classList.add('open'); }
+function renderModalTeamList() {
+  $('modal-team-list').innerHTML = allTeams().map(t=>`
+    <div class="team-list-row">
+      <span>${t.name} <span style="color:var(--muted);font-size:10px">(${t.pass})</span></span>
+      <button class="btn-remove-team" onclick="removeTeam('${t.name}')">✕</button>
+    </div>`).join('');
+}
+function addTeamFromModal() {
+  const name=document.getElementById('new-team-name').value.trim();
+  const pass=document.getElementById('new-team-pass').value.trim()||name.toLowerCase().replace(/\s+/g,'');
+  if(!name) return;
+  SFX.click();
+  socket.emit('addTeam',{name,pass},res=>{
+    if(res.ok){document.getElementById('new-team-name').value='';document.getElementById('new-team-pass').value='';renderModalTeamList();}
+    else alert(res.error);
+  });
+}
+function removeTeam(name){
+  socket.emit('removeTeam',{name},res=>{if(res.ok)renderModalTeamList();else alert(res.error);});
+}
+
+// ═══════════════════════════════════════════════════════
+//  PROJECTOR
+// ═══════════════════════════════════════════════════════
+function renderProjector() {
+  if (L.screen!=='projector') return;
+  const gs    = L.gameState||{};
+  const phase = gs.phase||'LOBBY';
+  const s     = getScenario(gs.currentLevel,gs.currentScenarioIdx);
+
+  const pill=$('proj-state-pill');
+  if(pill){pill.textContent=phase;pill.className='admin-state-pill '+phase;}
+
+  if(!s||phase==='LOBBY'){
+    $('proj-level-tag').textContent       = 'STANDBY — AWAITING MISSION';
+    $('proj-title').textContent           = 'Chaos or Release?';
+    $('proj-body').textContent            = 'Guide FlowPay from a scrappy startup to a global payment platform.\nEvery DevOps decision your team makes shapes the company\'s fate.';
+    $('proj-timer').textContent           = '—';
+    $('proj-timer').className             = 'proj-timer';
+    $('proj-answer-reveal').style.display = 'none';
+    $('proj-decisions').innerHTML         = '';
+  } else {
+    $('proj-level-tag').textContent = `LEVEL ${s.level} — ROUND ${s.round}/34 — ${s.levelName.toUpperCase()} — ${s.type.toUpperCase()}`;
+    $('proj-title').textContent     = s.title;
+    $('proj-body').textContent      = s.body;
+
+    if(phase==='AFTERMATH'||phase==='RECON'){
+      $('proj-answer-reveal').style.display='block';
+      const b=$('proj-answer-banner');
+      b.className   = 'proj-answer-banner '+(s.answer==='deploy'?'correct':'wrong');
+      b.textContent = `✓ ${s.answer.toUpperCase()} — ${s.explanation}`;
+    } else {
+      $('proj-answer-reveal').style.display='none';
+    }
+
+    $('proj-decisions').innerHTML = onlineTeams().map(t=>{
+      const dec=L.decisions[key(t.name)];
+      let cls='proj-dec-chip',label='…';
+      if(t.frozen){cls+=' frozen';label='❄';}
+      else if(dec){cls+=(phase==='AFTERMATH'||phase==='RECON')?` voted-${dec}`:' voted';label=(phase==='AFTERMATH'||phase==='RECON')?dec.toUpperCase():'✓';}
+      return `<div class="${cls}"><div class="proj-dec-team">${t.name}</div><div class="proj-dec-choice">${label}</div></div>`;
+    }).join('');
+  }
+
+  $('proj-leaderboard').innerHTML = leaderboard().map((t,i)=>{
+    const rc=i===0?'gold':i===1?'silver':i===2?'bronze':'';
+    const c=t.cards||{};
+    return `<div class="lb-row-proj ${i===0?'top1':''} ${t.frozen?'frozen-row':''}">
+      <div class="lb-rank-big ${rc}">${i+1}</div>
+      <div class="lb-info">
+        <div class="lb-team-name">${t.name}</div>
+        <div class="lb-team-cards"><span class="card-dots">
+          <span class="card-dot ${c.rollback!==false?'active-rollback':'used'}"></span>
+          <span class="card-dot ${c.freeze!==false?'active-freeze':'used'}"></span>
+          <span class="card-dot ${c.doublerisk!==false?'active-doublerisk':'used'}"></span>
+        </span></div>
+      </div>
+      <div class="lb-score-big ${(t.score||0)>=0?'pos':'neg'}">${(t.score||0)>=0?'+':''}${t.score||0}</div>
+    </div>`;
+  }).join('');
+}
+
+// ═══════════════════════════════════════════════════════
+//  BOOT
+// ═══════════════════════════════════════════════════════
+function boot() {
+  initParticles();
+  const overlay = document.getElementById('connecting-overlay');
+  socket.on('connect', () => {
+    setTimeout(()=>{
+      if(overlay){overlay.classList.add('hidden');setTimeout(()=>{if(overlay)overlay.style.display='none';},600);}
+      setScreen('login-screen');
+    }, 800);
+  });
+  if (socket.connected) {
+    setTimeout(()=>{
+      if(overlay){overlay.classList.add('hidden');setTimeout(()=>{if(overlay)overlay.style.display='none';},600);}
+      setScreen('login-screen');
+    }, 800);
+  }
+}
+document.addEventListener('DOMContentLoaded', boot);
+
