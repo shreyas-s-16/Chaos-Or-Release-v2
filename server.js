@@ -21,8 +21,10 @@ const io = new Server(server, {
 });
 
 app.use(express.json());
-app.use(express.static(path.join(__dirname, 'public')));
-app.use('/images', express.static(path.join(__dirname, 'public/images')));
+app.use(express.static(__dirname));
+// Explicitly serve SVG diagrams
+app.use('/images', express.static(path.join(__dirname, 'images')));
+
 // ── FIREBASE ──
 admin.initializeApp({
   credential: admin.credential.cert({
@@ -184,29 +186,30 @@ async function doRevealAnswer() {
 
   const updates = {};
   const now = Date.now();
+  const clean = obj => JSON.parse(JSON.stringify(obj));
 
   Object.values(teams).forEach(t => {
     if (!t.online) return;
     const k = key(t.name);
-    const dec = decs[k];
-    const history = [...(t.history || [])];
+    const dec = decs[k] || null;
+    const history = (t.history || []).map(h => clean(h));
 
-    // Frozen teams — skip scoring but record history
+    // Frozen teams — skip scoring, record history, unfreeze for next round
     if (t.frozen) {
-      updates[`game/teams/${k}/frozen`] = false;
       history.push({ round: getRound(gs), decision: 'frozen', pts: 0, phase: gs.phase });
+      updates[`game/teams/${k}/frozen`] = false;
       updates[`game/teams/${k}/history`] = history;
       return;
     }
 
-    // Late submission penalty (-1)
+    // Late submission check
     const submittedAt = dec ? (decs[`${k}_timestamp`] || now) : now;
-    const isLate = (submittedAt - gs.breachStartedAt) > (gs.breachDuration * 1000);
+    const isLate = (submittedAt - (gs.breachStartedAt || 0)) > ((gs.breachDuration || BREACH_DURATION) * 1000);
 
     if (!dec) {
-      // No decision
-      updates[`game/teams/${k}/score`] = (t.score || 0) - 1;
+      // No decision — -1 pt penalty
       history.push({ round: getRound(gs), decision: 'none', pts: -1, phase: gs.phase });
+      updates[`game/teams/${k}/score`] = (t.score || 0) - 1;
       updates[`game/teams/${k}/history`] = history;
       return;
     }
@@ -216,34 +219,33 @@ async function doRevealAnswer() {
     if (dec === s.answer) {
       pts = 6;
     } else {
-      // 3. Sabotage check: Double Risk spikes penalty from -5 to -8
+      // Double Risk: -8 instead of -5
       pts = t.targeted ? -8 : -5;
     }
 
-    // 2. Latency penalty: -1 if submitted after breach window
-    if (isLate && dec !== s.answer) pts -= 1;
-    if (isLate && dec === s.answer) pts -= 1;
+    // 2. Latency penalty: -1 if submitted late
+    if (isLate) pts -= 1;
 
-    // Quiz bonus for L2 (correct quiz unlocks decision, correct answer = bonus already included)
-    // L3 mini-quiz bonuses calculated separately
+    // 3. L3 forensic trail quiz bonuses
     if (s.type === 'forensic_trail') {
       const teamQuiz = quiz[k] || {};
-      let quizBonus = 0;
       (s.clues || []).forEach((clue, i) => {
-        if (teamQuiz[`clue_${i}`] === clue.correct) quizBonus += clue.points;
+        if (teamQuiz[`clue_${i}`] === clue.correct) pts += (clue.points || 0);
       });
-      pts += quizBonus;
     }
 
+    history.push({ round: getRound(gs), decision: dec, pts, phase: gs.phase });
     updates[`game/teams/${k}/score`] = (t.score || 0) + pts;
     updates[`game/teams/${k}/targeted`] = false;
-    history.push({ round: getRound(gs), decision: dec, pts, phase: gs.phase });
     updates[`game/teams/${k}/history`] = history;
   });
 
   updates['game/state/phase'] = 'AFTERMATH';
-  updates['game/state/aftermathStart'] = Date.now();
-  updates['game/state/revealedAnswer'] = s.answer;
+  updates['game/state/aftermathStart'] = now;
+  updates['game/state/revealedAnswer'] = s.answer || '';
+
+  // Firebase rejects undefined values — strip them before writing
+  Object.keys(updates).forEach(k => { if (updates[k] === undefined) delete updates[k]; });
 
   await db.ref().update(updates);
   await broadcastState();
