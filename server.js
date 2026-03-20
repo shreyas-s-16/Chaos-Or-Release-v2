@@ -21,8 +21,10 @@ const io = new Server(server, {
 });
 
 app.use(express.json());
-app.use(express.static(path.join(__dirname, 'public')));
-app.use('/images', express.static(path.join(__dirname, 'public/images')));
+app.use(express.static(__dirname));
+// Explicitly serve SVG diagrams
+app.use('/images', express.static(path.join(__dirname, 'images')));
+
 // ── FIREBASE ──
 admin.initializeApp({
   credential: admin.credential.cert({
@@ -132,6 +134,7 @@ async function broadcastState() {
     timerLeft,
     timerMax,
     timerPhase,
+    revealedAnswer: gs.revealedAnswer || '',
   });
 }
 

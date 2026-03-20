@@ -90,10 +90,11 @@ let L = {
   gameState: null, teams: {}, decisions: {}, quizAnswers: {},
   timerLeft: 0, timerMax: 60, timerInterval: null,
   prevPhase: null,
-  quizUnlocked: false,  // L2: quiz answered correctly
-  quizAnswered: {},     // L3: which clues answered
-  selectedTarget: null, // card modal
-  overrideTeam: null,   // score override
+  revealedAnswer: null,  // set by server during AFTERMATH
+  quizUnlocked: false,
+  quizAnswered: {},
+  selectedTarget: null,
+  overrideTeam: null,
   rollbackInterval: null,
 };
 
@@ -117,7 +118,8 @@ socket.on('gameState', data => {
   L.teams = data.teams || {};
   L.decisions = data.decisions || {};
   L.quizAnswers = data.quizAnswers || {};
-  // revealedAnswer is embedded in L.gameState.revealedAnswer (set by server in AFTERMATH)
+  // Store revealedAnswer from top-level payload — never rely on s.answer which is absent on client
+  if (data.revealedAnswer) L.revealedAnswer = data.revealedAnswer;
 
   // Sync timer from gameState so reconnecting clients get correct timer immediately
   if (data.timerLeft !== undefined && data.timerMax > 0) {
@@ -128,6 +130,10 @@ socket.on('gameState', data => {
 
   // Phase change sounds + animations
   if (prevPhase !== L.gameState.phase) {
+    // Reset revealedAnswer when a new round starts
+    if (L.gameState.phase === 'LOBBY' || L.gameState.phase === 'BRIEFING') {
+      L.revealedAnswer = null;
+    }
     handlePhaseChange(prevPhase, L.gameState.phase);
   }
   rerender();
@@ -243,7 +249,8 @@ function updateTimerUI(left, max, phase) {
     const c = 326.73;
     ring.style.strokeDashoffset = c - (pct / 100) * c;
     ring.className = 'ctf-ring-fill' + (urgent ? ' urgent' : '');
-    if (isSab) ring.style.stroke = 'var(--red)';
+    // Always explicitly set stroke so it resets correctly between rounds
+    ring.style.stroke = isSab ? 'var(--red)' : urgent ? (left <= 5 ? 'var(--red)' : 'var(--amber)') : 'var(--green)';
   }
 
   // Status text
@@ -277,8 +284,7 @@ function updateTimerUI(left, max, phase) {
 // ═══════════════════════════════════════════════════════
 function startRollbackWindow() {
   const team = myTeam(); if (!team) return;
-  const gs = L.gameState; if (!gs) return;
-  const correctAnswer = gs.revealedAnswer;
+  const correctAnswer = L.revealedAnswer || L.gameState.revealedAnswer;
   if (!correctAnswer) return;
 
   const myDec = L.decisions[key(L.teamName)];
@@ -715,21 +721,22 @@ function renderDecoderLevel(team, s, phase) {
 }
 
 function renderResults(team, s) {
-  const gs = L.gameState || {};
-  const correctAnswer = gs.revealedAnswer || s.answer || '?';
+  const correctAnswer = L.revealedAnswer || L.gameState.revealedAnswer || '';
   const myDec = L.decisions[key(L.teamName)];
   if (team.frozen) {
     showBanner('wrong', '❄ You were frozen this round. No points.');
   } else if (!myDec) {
-    showBanner('wrong', `⏱ No decision — −1 pt. Correct: ${correctAnswer.toUpperCase()}`);
-  } else if (myDec === correctAnswer) {
-    const outcome = s && s.delayOutcome && myDec === 'delay' ? s.delayOutcome : (s && s.deployOutcome && myDec === 'deploy' ? s.deployOutcome : '');
-    showBanner('correct', `✓ CORRECT! +6 pts.${outcome ? ' ' + outcome : ''}`);
+    showBanner('wrong', `⏱ No decision — −1 pt.${correctAnswer ? ' Correct: ' + correctAnswer.toUpperCase() : ''}`);
+  } else if (correctAnswer && myDec === correctAnswer) {
+    showBanner('correct', `✓ CORRECT! +6 pts.`);
     SFX.correct();
-  } else {
+  } else if (correctAnswer) {
     const pen = team.targeted ? -8 : -5;
     showBanner('wrong', `✗ WRONG! ${pen} pts. Correct: ${correctAnswer.toUpperCase()}. ${s ? (s.explanation || '') : ''}`);
     SFX.wrong();
+  } else {
+    // revealedAnswer not yet received — show neutral pending state
+    showBanner('wrong', '⏳ Calculating results…');
   }
   if (s && s.learning) {
     const b = $('result-banner');
@@ -859,10 +866,8 @@ function renderAdmin() {
 
   const ad = $('admin-answer-display');
   if (s && (phase === 'AFTERMATH' || phase === 'RECON')) {
-    const revAns = gs.revealedAnswer || s.answer || '?';
-    ad.className = `answer-${revAns}`; ad.textContent = revAns.toUpperCase() + ' — ' + s.explanation;
-  } else if (s && phase === 'LOBBY') {
-    ad.className = 'answer-hidden'; ad.textContent = 'Hidden until reveal';
+    const revAns = L.revealedAnswer || gs.revealedAnswer || '?';
+    ad.className = `answer-${revAns}`; ad.textContent = revAns.toUpperCase() + ' — ' + (s.explanation || '');
   } else {
     ad.className = 'answer-hidden'; ad.textContent = 'Hidden until reveal';
   }
@@ -1024,7 +1029,7 @@ function renderProjector() {
     if (phase === 'AFTERMATH' || phase === 'RECON') {
       $('proj-answer-reveal').style.display = 'block';
       const b = $('proj-answer-banner');
-      const revAns = gs.revealedAnswer || (s && s.answer) || '?';
+      const revAns = L.revealedAnswer || gs.revealedAnswer || '?';
       b.className = 'proj-answer-banner ' + (revAns === 'deploy' ? 'correct' : 'wrong');
       b.textContent = `✓ ${revAns.toUpperCase()} — ${s ? s.explanation : ''}`;
     } else {
