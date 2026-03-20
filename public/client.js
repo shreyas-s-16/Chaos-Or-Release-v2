@@ -215,10 +215,12 @@ function setConnIndicators(ok) {
 //  TIMER
 // ═══════════════════════════════════════════════════════
 function updateTimerUI(left, max, phase) {
-  const pct = Math.max(0, (left / max) * 100);
+  if (!max || max <= 0) return; // don't render if max is 0 or undefined
+  const pct = Math.max(0, Math.min(100, (left / max) * 100));
   const isSab = phase === 'SABOTAGE_PULSE';
-  const color = isSab ? 'var(--red)' : left <= 5 ? 'var(--red)' : left <= 10 ? 'var(--amber)' : 'var(--green)';
-  const urgent = left <= 10 || isSab;
+  // Only go red/amber near the end — never red just because left is small on first tick
+  const urgent = !isSab && left <= 10 && max > 10;
+  const color = isSab ? 'var(--red)' : urgent ? (left <= 5 ? 'var(--red)' : 'var(--amber)') : 'var(--green)';
 
   ['admin-timer-bar', 'team-timer-bar', 'proj-timer-fill'].forEach(id => {
     const el = $(id); if (!el) return; el.style.width = pct + '%'; el.style.background = color;
@@ -540,16 +542,22 @@ function renderImageQuizLevel(team, s, phase) {
 
   // Render the diagram image/SVG inside scenario card
   if (s.imageUrl) {
-    const existing = document.getElementById('scenario-diagram');
+    let existing = document.getElementById('scenario-diagram');
     if (!existing) {
       const imgWrap = document.createElement('div');
       imgWrap.id = 'scenario-diagram';
-      imgWrap.style.cssText = 'margin:12px 0;border:0.5px solid #1a2e10;border-radius:4px;overflow:hidden;background:#060d04;';
-      const img = document.createElement('img');
-      img.src = s.imageUrl;
-      img.alt = s.imageAlt || 'System diagram';
-      img.style.cssText = 'width:100%;display:block;';
-      imgWrap.appendChild(img);
+      imgWrap.style.cssText = 'margin:12px 0;border:0.5px solid #1a2e10;border-radius:4px;overflow:hidden;background:#060d04;min-height:200px;';
+      // Use object tag so SVG internal styles render correctly
+      const obj = document.createElement('object');
+      obj.data = s.imageUrl;
+      obj.type = 'image/svg+xml';
+      obj.style.cssText = 'width:100%;display:block;min-height:200px;';
+      // Fallback img in case object fails
+      const fallback = document.createElement('img');
+      fallback.src = s.imageUrl;
+      fallback.style.cssText = 'width:100%;display:block;';
+      obj.appendChild(fallback);
+      imgWrap.appendChild(obj);
       // Insert before quiz panel
       panel.parentNode.insertBefore(imgWrap, panel);
     }
