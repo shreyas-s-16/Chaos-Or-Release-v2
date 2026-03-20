@@ -516,7 +516,14 @@ function renderHistory(team) {
 }
 
 function renderTeamScenario(team, s, phase) {
-  $('frozen-banner').style.display = team.frozen ? 'flex' : 'none';
+  // Frozen THIS round — show banner + full-screen ice overlay
+  const isFrozen = !!team.frozen;
+  $('frozen-banner').style.display = isFrozen ? 'flex' : 'none';
+  const iceOverlay = $('ice-overlay');
+  if (iceOverlay) iceOverlay.style.display = isFrozen ? 'flex' : 'none';
+  // Frozen NEXT round — show warning banner
+  const frozenNextEl = $('frozen-next-banner');
+  if (frozenNextEl) frozenNextEl.style.display = team.frozenNextRound ? 'flex' : 'none';
   $('targeted-banner').style.display = team.targeted ? 'flex' : 'none';
   $('result-banner').style.display = 'none';
 
@@ -590,36 +597,30 @@ function renderImageQuizLevel(team, s, phase) {
   const panel = $('image-quiz-panel');
   panel.style.display = 'block';
 
-  // Render the diagram — fetch SVG and inject inline so internal styles work
+  // Render the diagram — try inline fetch first, fallback to img tag
   if (s.imageUrl) {
     let existing = document.getElementById('scenario-diagram');
     if (!existing) {
       const imgWrap = document.createElement('div');
       imgWrap.id = 'scenario-diagram';
-      imgWrap.style.cssText = 'margin:12px 0;border:0.5px solid #1a2e10;border-radius:4px;overflow:hidden;background:#060d04;min-height:200px;display:flex;align-items:center;justify-content:center;';
-      imgWrap.innerHTML = '<div style="color:#28c840;font-size:11px;opacity:0.5;padding:20px;">Loading diagram…</div>';
+      imgWrap.style.cssText = 'margin:12px 0;border:0.5px solid #1a2e10;border-radius:4px;overflow:hidden;background:#060d04;';
       panel.parentNode.insertBefore(imgWrap, panel);
-      // Fetch SVG text and inject inline — preserves all internal styles
-      fetch(s.imageUrl)
-        .then(r => r.text())
+
+      // Try fetch+inline first (preserves SVG styles)
+      fetch(s.imageUrl + '?v=' + Date.now())
+        .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.text(); })
         .then(svgText => {
           const wrap = document.getElementById('scenario-diagram');
-          if (wrap) {
-            wrap.style.minHeight = '';
-            wrap.style.alignItems = '';
-            wrap.style.justifyContent = '';
-            wrap.innerHTML = svgText;
-            const svgEl = wrap.querySelector('svg');
-            if (svgEl) {
-              svgEl.style.width = '100%';
-              svgEl.style.height = 'auto';
-              svgEl.style.display = 'block';
-            }
-          }
+          if (!wrap) return;
+          wrap.innerHTML = svgText;
+          const svgEl = wrap.querySelector('svg');
+          if (svgEl) { svgEl.style.width = '100%'; svgEl.style.height = 'auto'; svgEl.style.display = 'block'; svgEl.removeAttribute('width'); }
         })
         .catch(() => {
+          // Fallback: img tag
           const wrap = document.getElementById('scenario-diagram');
-          if (wrap) wrap.innerHTML = '<div style="color:#e5341a;padding:20px;font-size:11px;">⚠ Diagram failed to load</div>';
+          if (!wrap) return;
+          wrap.innerHTML = '<img src="' + s.imageUrl + '" style="width:100%;display:block;" alt="System diagram" />';
         });
     }
   }

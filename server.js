@@ -169,7 +169,7 @@ async function seedIfEmpty() {
     defaultTeams[key(name)] = {
       name, pass: n.toLowerCase(), score: 0,
       cards: { rollback: true, freeze: true, doublerisk: true },
-      frozen: false, targeted: false, history: [], online: false,
+      frozen: false, frozenNextRound: false, targeted: false, history: [], online: false,
     };
   });
   await gameRef.set({
@@ -244,11 +244,11 @@ async function doRevealAnswer() {
     const dec = decs[k] || null;
     const history = (t.history || []).map(h => clean(h));
 
-    // Frozen — skip scoring, unfreeze for next round
+    // Frozen THIS round — skip scoring (frozen was set at start of this round by startRound)
     if (t.frozen) {
       history.push({ round: getRound(gs), decision: 'frozen', pts: 0, phase: gs.phase });
-      updates[`game/teams/${k}/frozen`] = false;
       updates[`game/teams/${k}/history`] = history;
+      // DO NOT unfreeze here — keep frozen=true, unfreeze happens in nextRound
       return;
     }
 
@@ -278,6 +278,16 @@ async function doRevealAnswer() {
 
     // Latency penalty: -1 if submitted after timer hit 0
     if (isLate) pts -= 1;
+
+    // L2 image_quiz: +2 bonus if quiz answered correctly (independent of decision)
+    if (s.type === 'image_quiz' && s.quiz) {
+      const teamQuiz = quiz[k] || {};
+      const stored = teamQuiz['quiz'];
+      // eslint-disable-next-line eqeqeq
+      if (stored != null && stored == s.quiz.correct) {
+        pts += 2;
+      }
+    }
 
     // L3 forensic trail: +2 per correct clue (independent of final decision)
     if (s.type === 'forensic_trail') {
@@ -309,10 +319,12 @@ async function doRevealAnswer() {
   await broadcastState();
   console.log(`Aftermath — answer: ${s.answer}`);
 
-  // Auto-advance to RECON after 20s (per handbook: Reveal = 20-30s)
+  // Auto-advance to RECON after 20s — guard against double-fire
   addTimer(async () => {
     const snap2 = await stateRef.once('value');
     const curGs = snap2.val() || {};
+    // Only advance if still in AFTERMATH (prevent double-fire from manual reveal)
+    if (curGs.phase !== 'AFTERMATH') return;
     await stateRef.update({ phase: 'RECON' });
     io.emit('phase', { phase: 'RECON', revealedAnswer: curGs.revealedAnswer || '' });
     await broadcastState();
@@ -453,7 +465,9 @@ io.on('connection', async (socket) => {
 
       const updates = {};
       if (cardType === 'freeze') {
-        updates[`game/teams/${key(targetName)}/frozen`] = true;
+        // frozenNextRound = true means skip scoring in the NEXT round
+        // frozen = false still so current round is unaffected
+        updates[`game/teams/${key(targetName)}/frozenNextRound`] = true;
         updates[`game/teams/${key(socket.teamName)}/cards/freeze`] = false;
       } else if (cardType === 'doublerisk') {
         updates[`game/teams/${key(targetName)}/targeted`] = true;
@@ -521,6 +535,22 @@ io.on('connection', async (socket) => {
       clearAllTimers();
       await decsRef.set(null);
       await quizRef.set(null);
+
+      // Promote frozenNextRound → frozen for this round
+      const teamsSnap = await teamsRef.once('value');
+      const teamsData = teamsSnap.val() || {};
+      const freezeUpdates = {};
+      Object.values(teamsData).forEach(t => {
+        const k = key(t.name);
+        if (t.frozenNextRound) {
+          freezeUpdates[`game/teams/${k}/frozen`] = true;
+          freezeUpdates[`game/teams/${k}/frozenNextRound`] = false;
+          console.log(`Team ${t.name} is FROZEN this round`);
+        }
+      });
+      if (Object.keys(freezeUpdates).length > 0) {
+        await db.ref().update(freezeUpdates);
+      }
 
       const level = gs ? (gs.currentLevel || 1) : 1;
       const breachDur = getBreachDuration(level);
@@ -600,10 +630,11 @@ io.on('connection', async (socket) => {
         console.log('Game complete — hoarding penalties applied');
       }
 
-      // Unfreeze and un-target all teams
+      // Un-target all teams, reset frozen (startRound will re-apply frozenNextRound)
       Object.keys(teams).forEach(k => {
         updates[`game/teams/${k}/frozen`] = false;
         updates[`game/teams/${k}/targeted`] = false;
+        // frozenNextRound is preserved — startRound will promote it to frozen
       });
 
       // Advance scenario/level
@@ -664,7 +695,7 @@ io.on('connection', async (socket) => {
       await teamsRef.child(key(name)).set({
         name, pass: password, score: 0,
         cards: { rollback: true, freeze: true, doublerisk: true },
-        frozen: false, targeted: false, history: [], online: false,
+        frozen: false, frozenNextRound: false, targeted: false, history: [], online: false,
       });
       await broadcastState();
       cb({ ok: true });

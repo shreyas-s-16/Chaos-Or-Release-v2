@@ -1,366 +1,407 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Chaos or Release?</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=JetBrains+Mono:wght@400;500;700&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=JetBrains+Mono:wght@400;500;700&family=Rajdhani:wght@400;500;600;700&display=swap"
+    rel="stylesheet" />
   <link rel="stylesheet" href="style.css" />
 </head>
+
 <body>
 
-<canvas id="particles-canvas"></canvas>
-<div class="scanlines"></div>
-<div class="noise"></div>
+  <canvas id="particles-canvas"></canvas>
+  <div class="scanlines"></div>
+  <div class="noise"></div>
 
-<!-- CONNECTING OVERLAY -->
-<div id="connecting-overlay" class="connecting-overlay">
-  <div class="connecting-box">
-    <div class="connecting-logo"><span class="logo-chaos">CHAOS</span> OR <span class="logo-release">RELEASE?</span></div>
-    <div class="connecting-dots"><span></span><span></span><span></span></div>
-    <div class="connecting-text" id="connecting-text">Connecting to server…</div>
-  </div>
-</div>
-
-<!-- PHASE ANNOUNCEMENT OVERLAY -->
-<div id="phase-overlay" class="phase-overlay">
-  <div class="phase-overlay-content">
-    <div class="phase-overlay-label" id="phase-overlay-label">PHASE</div>
-    <div class="phase-overlay-name" id="phase-overlay-name">BRIEFING</div>
-    <div class="phase-overlay-sub" id="phase-overlay-sub">Incoming transmission…</div>
-  </div>
-</div>
-
-<!-- ═══════ LOGIN ═══════ -->
-<div id="login-screen" class="screen">
-  <div class="login-bg-glow"></div>
-  <div class="login-container">
-    <div class="login-logo-wrap">
-      <div class="logo-eyebrow">⚡ THE DEVOPS SURVIVAL GAME — FLOWPAY EDITION</div>
-      <div class="login-logo">
-        <span class="logo-chaos">CHAOS</span>
-        <span class="logo-or">OR</span>
-        <span class="logo-release">RELEASE?</span>
+  <!-- CONNECTING OVERLAY -->
+  <div id="connecting-overlay" class="connecting-overlay">
+    <div class="connecting-box">
+      <div class="connecting-logo"><span class="logo-chaos">CHAOS</span> OR <span class="logo-release">RELEASE?</span>
       </div>
-    </div>
-    <div class="terminal-window">
-      <div class="terminal-titlebar">
-        <div class="terminal-dots">
-          <span class="tdot tdot-red"></span>
-          <span class="tdot tdot-yellow"></span>
-          <span class="tdot tdot-green"></span>
-        </div>
-        <div class="terminal-title">COR-TERMINAL v2 — TEAM AUTH</div>
-        <div style="width:52px"></div>
-      </div>
-      <div class="terminal-body">
-        <div class="terminal-line"><span class="t-prompt">›</span> <span class="t-green">System Authentication Required</span></div>
-        <div class="terminal-line t-dim">Connecting to FlowPay GameServer v2…</div>
-        <div class="terminal-line t-dim">● Server link established <span class="t-green blink-cursor">|</span></div>
-        <div class="terminal-spacer"></div>
-        <div class="terminal-line"><span class="t-prompt">›</span> <span class="t-label">TEAM_NAME:</span></div>
-        <div class="t-input-wrap">
-          <span class="t-prompt">_</span>
-          <input class="t-input" id="login-team" placeholder="Enter team name…" autocomplete="off" />
-        </div>
-        <div class="terminal-line" style="margin-top:14px"><span class="t-prompt">›</span> <span class="t-label">PASSWORD:</span></div>
-        <div class="t-input-wrap">
-          <span class="t-prompt">_</span>
-          <input class="t-input" type="password" id="login-pass" placeholder="Enter password…" onkeydown="if(event.key==='Enter')doLogin()" />
-        </div>
-        <div class="terminal-error" id="login-err">
-          <span class="t-prompt">✗</span> ACCESS DENIED — Invalid credentials.
-        </div>
-        <button class="t-login-btn" onclick="doLogin()"><span>▶ AUTHENTICATE</span></button>
-        <div class="terminal-spacer"></div>
-        <div class="terminal-line t-dim">
-          <span class="t-dot-green"></span>
-          Secure link /
-          <a class="t-link" onclick="promptAdmin()">⚙ Admin</a>
-          <span style="color:#333;margin:0 6px">|</span>
-          <a class="t-link" onclick="promptProjector()">📡 Projector</a>
-        </div>
-      </div>
-    </div>
-    <div class="login-stats">
-      <div class="stat-item"><span class="stat-num">4</span><span class="stat-lbl">LEVELS</span></div>
-      <div class="stat-item"><span class="stat-num">34</span><span class="stat-lbl">ROUNDS</span></div>
-      <div class="stat-item"><span class="stat-num">5</span><span class="stat-lbl">PHASES</span></div>
-      <div class="stat-item"><span class="stat-num">∞</span><span class="stat-lbl">CHAOS</span></div>
+      <div class="connecting-dots"><span></span><span></span><span></span></div>
+      <div class="connecting-text" id="connecting-text">Connecting to server…</div>
     </div>
   </div>
-</div>
 
-<!-- ═══════ TEAM DASHBOARD ═══════ -->
-<div id="team-screen" class="screen">
-  <nav class="topnav">
-    <div class="nav-logo"><span class="logo-chaos">CHAOS</span> OR <span class="logo-release">RELEASE?</span></div>
-    <div class="nav-center" id="nav-round-info">—</div>
-    <div class="nav-right">
-      <span class="nav-badge" id="team-name-badge">Team</span>
-      <span class="nav-badge" id="phase-badge">LOBBY</span>
-      <div class="conn-indicator" id="team-conn-indicator"></div>
-      <button class="btn-nav" onclick="logout()">LOGOUT</button>
+  <!-- PHASE ANNOUNCEMENT OVERLAY -->
+  <div id="phase-overlay" class="phase-overlay">
+    <div class="phase-overlay-content">
+      <div class="phase-overlay-label" id="phase-overlay-label">PHASE</div>
+      <div class="phase-overlay-name" id="phase-overlay-name">BRIEFING</div>
+      <div class="phase-overlay-sub" id="phase-overlay-sub">Incoming transmission…</div>
     </div>
-  </nav>
+  </div>
 
-  <!-- Phase banner -->
-  <div class="phase-banner" id="phase-banner" style="display:none"></div>
-
-  <div class="team-layout">
-    <div class="team-main-col">
-      <!-- Status banners -->
-      <div class="status-banner frozen" id="frozen-banner" style="display:none">
-        <span class="blink-dot blue"></span> ❄ SYSTEM FROZEN — You are locked out this round.
+  <!-- ═══════ LOGIN ═══════ -->
+  <div id="login-screen" class="screen">
+    <div class="login-bg-glow"></div>
+    <div class="login-container">
+      <div class="login-logo-wrap">
+        <div class="logo-eyebrow">⚡ THE DEVOPS SURVIVAL GAME — FLOWPAY EDITION</div>
+        <div class="login-logo">
+          <span class="logo-chaos">CHAOS</span>
+          <span class="logo-or">OR</span>
+          <span class="logo-release">RELEASE?</span>
+        </div>
       </div>
-      <div class="status-banner targeted" id="targeted-banner" style="display:none">
-        <span class="blink-dot red"></span> ⚡ DOUBLE RISK ACTIVE — Wrong answer = −8 pts.
-      </div>
-      <div class="status-banner" id="result-banner" style="display:none"></div>
-
-      <!-- CTF Timer -->
-      <div id="timer-row" class="timer-row" style="display:none">
-        <div class="ctf-timer-wrap">
-          <div class="ctf-timer-circle-wrap">
-            <svg class="ctf-timer-svg" viewBox="0 0 120 120">
-              <circle class="ctf-ring-bg" cx="60" cy="60" r="52"/>
-              <circle class="ctf-ring-fill" id="ctf-ring" cx="60" cy="60" r="52"/>
-            </svg>
-            <div class="ctf-timer-inner">
-              <div class="ctf-timer-num" id="team-timer-text">60</div>
-              <div class="ctf-timer-label" id="team-timer-phase-label">SEC</div>
-            </div>
+      <div class="terminal-window">
+        <div class="terminal-titlebar">
+          <div class="terminal-dots">
+            <span class="tdot tdot-red"></span>
+            <span class="tdot tdot-yellow"></span>
+            <span class="tdot tdot-green"></span>
           </div>
-          <div class="ctf-timer-info">
-            <div class="ctf-timer-status" id="ctf-timer-status">
-              <span class="ctf-status-dot" id="ctf-status-dot"></span>
-              <span id="ctf-status-text">BREACH WINDOW</span>
-            </div>
-            <div class="ctf-timer-bar-wrap">
-              <div class="ctf-timer-bar-label" id="ctf-bar-label">TIME REMAINING</div>
-              <div class="timer-track" style="margin-top:6px"><div class="timer-fill" id="team-timer-bar"></div></div>
-            </div>
-            <div class="ctf-timer-hint" id="ctf-timer-hint">Submit your decision before time runs out</div>
+          <div class="terminal-title">COR-TERMINAL v2 — TEAM AUTH</div>
+          <div style="width:52px"></div>
+        </div>
+        <div class="terminal-body">
+          <div class="terminal-line"><span class="t-prompt">›</span> <span class="t-green">System Authentication
+              Required</span></div>
+          <div class="terminal-line t-dim">Connecting to FlowPay GameServer v2…</div>
+          <div class="terminal-line t-dim">● Server link established <span class="t-green blink-cursor">|</span></div>
+          <div class="terminal-spacer"></div>
+          <div class="terminal-line"><span class="t-prompt">›</span> <span class="t-label">TEAM_NAME:</span></div>
+          <div class="t-input-wrap">
+            <span class="t-prompt">_</span>
+            <input class="t-input" id="login-team" placeholder="Enter team name…" autocomplete="off" />
+          </div>
+          <div class="terminal-line" style="margin-top:14px"><span class="t-prompt">›</span> <span
+              class="t-label">PASSWORD:</span></div>
+          <div class="t-input-wrap">
+            <span class="t-prompt">_</span>
+            <input class="t-input" type="password" id="login-pass" placeholder="Enter password…"
+              onkeydown="if(event.key==='Enter')doLogin()" />
+          </div>
+          <div class="terminal-error" id="login-err">
+            <span class="t-prompt">✗</span> ACCESS DENIED — Invalid credentials.
+          </div>
+          <button class="t-login-btn" onclick="doLogin()"><span>▶ AUTHENTICATE</span></button>
+          <div class="terminal-spacer"></div>
+          <div class="terminal-line t-dim">
+            <span class="t-dot-green"></span>
+            Secure link /
+            <a class="t-link" onclick="promptAdmin()">⚙ Admin</a>
+            <span style="color:#333;margin:0 6px">|</span>
+            <a class="t-link" onclick="promptProjector()">📡 Projector</a>
           </div>
         </div>
       </div>
+      <div class="login-stats">
+        <div class="stat-item"><span class="stat-num">4</span><span class="stat-lbl">LEVELS</span></div>
+        <div class="stat-item"><span class="stat-num">34</span><span class="stat-lbl">ROUNDS</span></div>
+        <div class="stat-item"><span class="stat-num">5</span><span class="stat-lbl">PHASES</span></div>
+        <div class="stat-item"><span class="stat-num">∞</span><span class="stat-lbl">CHAOS</span></div>
+      </div>
+    </div>
+  </div>
 
-      <!-- SCENARIO DISPLAY — swaps between level types -->
-      <div class="scenario-card" id="scenario-display">
-        <div class="scenario-waiting">
-          <div class="waiting-animation"><div class="waiting-line"></div><div class="waiting-line"></div><div class="waiting-line"></div></div>
-          <p>Awaiting mission briefing…</p>
-          <p class="dim">$ standby for incoming transmission_</p>
+  <!-- ═══════ TEAM DASHBOARD ═══════ -->
+  <div id="team-screen" class="screen">
+    <nav class="topnav">
+      <div class="nav-logo"><span class="logo-chaos">CHAOS</span> OR <span class="logo-release">RELEASE?</span></div>
+      <div class="nav-center" id="nav-round-info">—</div>
+      <div class="nav-right">
+        <span class="nav-badge" id="team-name-badge">Team</span>
+        <span class="nav-badge" id="phase-badge">LOBBY</span>
+        <div class="conn-indicator" id="team-conn-indicator"></div>
+        <button class="btn-nav" onclick="logout()">LOGOUT</button>
+      </div>
+    </nav>
+
+    <!-- Phase banner -->
+    <div class="phase-banner" id="phase-banner" style="display:none"></div>
+
+    <div class="team-layout">
+      <div class="team-main-col">
+        <!-- Ice overlay — full screen when frozen THIS round -->
+        <div id="ice-overlay"
+          style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;z-index:999;background:rgba(0,40,80,0.85);backdrop-filter:blur(4px);flex-direction:column;align-items:center;justify-content:center;pointer-events:all;">
+          <div style="font-size:80px;margin-bottom:16px;">❄</div>
+          <div
+            style="font-family:'JetBrains Mono',monospace;font-size:28px;color:#4af;font-weight:700;letter-spacing:4px;text-shadow:0 0 30px #4af;">
+            SYSTEM FROZEN</div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:14px;color:#8cf;margin-top:12px;opacity:0.8;">You
+            are locked out this round. Wait for the next round.</div>
         </div>
-      </div>
 
-      <!-- L2: Image Quiz unlock -->
-      <div id="image-quiz-panel" style="display:none" class="quiz-panel">
-        <div class="quiz-panel-title">⚡ IDENTIFY THE BOTTLENECK — Unlock Deploy/Delay</div>
-        <div id="image-quiz-options" class="quiz-options"></div>
-        <div id="image-quiz-feedback" class="quiz-feedback"></div>
-      </div>
+        <!-- Status banners -->
+        <div class="status-banner frozen" id="frozen-banner" style="display:none">
+          <span class="blink-dot blue"></span> ❄ SYSTEM FROZEN — You are locked out this round.
+        </div>
+        <div class="status-banner" id="frozen-next-banner"
+          style="display:none;background:rgba(0,30,60,0.5);border-color:rgba(0,100,200,0.4);color:#4af;">
+          <span class="blink-dot blue"></span> ⚠ WARNING — You will be FROZEN next round.
+        </div>
+        <div class="status-banner targeted" id="targeted-banner" style="display:none">
+          <span class="blink-dot red"></span> ⚡ DOUBLE RISK ACTIVE — Wrong answer = −8 pts.
+        </div>
+        <div class="status-banner" id="result-banner" style="display:none"></div>
 
-      <!-- L3: Forensic trail clues -->
-      <div id="forensic-panel" style="display:none" class="forensic-panel">
-        <div class="forensic-clues" id="forensic-clues"></div>
-      </div>
-
-      <!-- L4: Decoder scratchpad -->
-      <div id="decoder-panel" style="display:none" class="decoder-panel">
-        <div class="decoder-title">🔓 BLACKBOX DECODER</div>
-        <div class="decoder-encoded" id="decoder-encoded"></div>
-        <div class="decoder-controls">
-          <div class="decoder-shift-wrap">
-            <span class="decoder-label">SHIFT VALUE:</span>
-            <div class="decoder-shift-display" id="decoder-shift">?</div>
+        <!-- CTF Timer -->
+        <div id="timer-row" class="timer-row" style="display:none">
+          <div class="ctf-timer-wrap">
+            <div class="ctf-timer-circle-wrap">
+              <svg class="ctf-timer-svg" viewBox="0 0 120 120">
+                <circle class="ctf-ring-bg" cx="60" cy="60" r="52" />
+                <circle class="ctf-ring-fill" id="ctf-ring" cx="60" cy="60" r="52" />
+              </svg>
+              <div class="ctf-timer-inner">
+                <div class="ctf-timer-num" id="team-timer-text">60</div>
+                <div class="ctf-timer-label" id="team-timer-phase-label">SEC</div>
+              </div>
+            </div>
+            <div class="ctf-timer-info">
+              <div class="ctf-timer-status" id="ctf-timer-status">
+                <span class="ctf-status-dot" id="ctf-status-dot"></span>
+                <span id="ctf-status-text">BREACH WINDOW</span>
+              </div>
+              <div class="ctf-timer-bar-wrap">
+                <div class="ctf-timer-bar-label" id="ctf-bar-label">TIME REMAINING</div>
+                <div class="timer-track" style="margin-top:6px">
+                  <div class="timer-fill" id="team-timer-bar"></div>
+                </div>
+              </div>
+              <div class="ctf-timer-hint" id="ctf-timer-hint">Submit your decision before time runs out</div>
+            </div>
           </div>
-          <input class="decoder-input" id="decoder-text" placeholder="Type your decoded message…" />
-          <button class="btn-ctrl green" onclick="submitDecoderAnswer()">⚡ SUBMIT DECODE</button>
         </div>
-        <div id="decoder-context" style="display:none"></div>
-        <div class="decoder-hint" id="decoder-hint"></div>
-        <div class="decoder-feedback" id="decoder-feedback"></div>
-      </div>
 
-      <!-- Decision buttons -->
-      <div class="decision-row" id="decision-row" style="display:none">
-        <button class="btn-decision btn-deploy" id="btn-deploy" onclick="submitDecision('deploy')">
-          <span class="dec-icon">▲</span>
-          <span class="dec-label">DEPLOY</span>
-          <span class="dec-hint">System is ready</span>
+        <!-- SCENARIO DISPLAY — swaps between level types -->
+        <div class="scenario-card" id="scenario-display">
+          <div class="scenario-waiting">
+            <div class="waiting-animation">
+              <div class="waiting-line"></div>
+              <div class="waiting-line"></div>
+              <div class="waiting-line"></div>
+            </div>
+            <p>Awaiting mission briefing…</p>
+            <p class="dim">$ standby for incoming transmission_</p>
+          </div>
+        </div>
+
+        <!-- L2: Image Quiz unlock -->
+        <div id="image-quiz-panel" style="display:none" class="quiz-panel">
+          <div class="quiz-panel-title">⚡ IDENTIFY THE BOTTLENECK — Unlock Deploy/Delay</div>
+          <div id="image-quiz-options" class="quiz-options"></div>
+          <div id="image-quiz-feedback" class="quiz-feedback"></div>
+        </div>
+
+        <!-- L3: Forensic trail clues -->
+        <div id="forensic-panel" style="display:none" class="forensic-panel">
+          <div class="forensic-clues" id="forensic-clues"></div>
+        </div>
+
+        <!-- L4: Decoder scratchpad -->
+        <div id="decoder-panel" style="display:none" class="decoder-panel">
+          <div class="decoder-title">🔓 BLACKBOX DECODER</div>
+          <div class="decoder-encoded" id="decoder-encoded"></div>
+          <div class="decoder-controls">
+            <div class="decoder-shift-wrap">
+              <span class="decoder-label">SHIFT VALUE:</span>
+              <div class="decoder-shift-display" id="decoder-shift">?</div>
+            </div>
+            <input class="decoder-input" id="decoder-text" placeholder="Type your decoded message…" />
+            <button class="btn-ctrl green" onclick="submitDecoderAnswer()">⚡ SUBMIT DECODE</button>
+          </div>
+          <div id="decoder-context" style="display:none"></div>
+          <div class="decoder-hint" id="decoder-hint"></div>
+          <div class="decoder-feedback" id="decoder-feedback"></div>
+        </div>
+
+        <!-- Decision buttons -->
+        <div class="decision-row" id="decision-row" style="display:none">
+          <button class="btn-decision btn-deploy" id="btn-deploy" onclick="submitDecision('deploy')">
+            <span class="dec-icon">▲</span>
+            <span class="dec-label">DEPLOY</span>
+            <span class="dec-hint">System is ready</span>
+          </button>
+          <button class="btn-decision btn-delay" id="btn-delay" onclick="submitDecision('delay')">
+            <span class="dec-icon">⏸</span>
+            <span class="dec-label">DELAY</span>
+            <span class="dec-hint">Risks detected</span>
+          </button>
+        </div>
+
+        <!-- Rollback (flashes 7s in Aftermath) -->
+        <button class="btn-rollback" id="rollback-btn" style="display:none" onclick="useRollback()">
+          ⏪ ACTIVATE ROLLBACK — Reduce penalty from −5 to −2 <span id="rollback-timer" class="rollback-timer"></span>
         </button>
-        <button class="btn-decision btn-delay" id="btn-delay" onclick="submitDecision('delay')">
-          <span class="dec-icon">⏸</span>
-          <span class="dec-label">DELAY</span>
-          <span class="dec-hint">Risks detected</span>
-        </button>
       </div>
 
-      <!-- Rollback (flashes 7s in Aftermath) -->
-      <button class="btn-rollback" id="rollback-btn" style="display:none" onclick="useRollback()">
-        ⏪ ACTIVATE ROLLBACK — Reduce penalty from −5 to −2 <span id="rollback-timer" class="rollback-timer"></span>
-      </button>
-    </div>
-
-    <!-- Sidebar -->
-    <div class="team-sidebar">
-      <div class="score-card">
-        <div class="score-label">SCORE</div>
-        <div class="score-value" id="team-score-disp">0</div>
-        <div class="score-rank" id="team-rank-disp">Rank —</div>
-      </div>
-      <div class="sidebar-section">
-        <div class="sidebar-title">⚡ SPECIAL CARDS</div>
-        <div class="cards-phase-note" id="cards-phase-note">Cards unlock during Sabotage Pulse</div>
-        <div id="team-cards-list"></div>
-        <div class="unused-warning" id="unused-warning" style="display:none">⚠ Unused cards = −2 pts each!</div>
-      </div>
-      <div class="sidebar-section">
-        <div class="sidebar-title">📋 ROUND HISTORY</div>
-        <div id="team-history"></div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- ═══════ ADMIN PANEL ═══════ -->
-<div id="admin-screen" class="screen">
-  <nav class="topnav">
-    <div class="nav-logo">⚙ <span class="logo-chaos">ADMIN</span> PANEL</div>
-    <div class="nav-center"><span class="admin-state-pill" id="admin-state-pill">LOBBY</span></div>
-    <div class="nav-right">
-      <div class="conn-indicator" id="admin-conn-indicator"></div>
-      <button class="btn-nav green" onclick="showProjectorFromAdmin()">📡 Projector</button>
-      <button class="btn-nav amber" onclick="openAddTeamModal()">+ Team</button>
-      <button class="btn-nav red" onclick="resetGame()">↺ Reset</button>
-      <button class="btn-nav" onclick="logout()">← Exit</button>
-    </div>
-  </nav>
-  <div class="admin-layout">
-    <div class="admin-left">
-      <div class="panel-title">LEVELS</div>
-      <div id="level-list"></div>
-      <div class="panel-divider"></div>
-      <div class="panel-title">SCENARIOS</div>
-      <div id="scenario-list"></div>
-    </div>
-    <div class="admin-center">
-      <div class="control-block">
-        <div class="big-timer" id="admin-timer-big">—</div>
-        <div class="timer-track" style="margin:12px 0"><div class="timer-fill" id="admin-timer-bar" style="width:100%"></div></div>
-        <div class="phase-indicator" id="admin-phase-indicator">LOBBY</div>
-        <div class="ctrl-btns" style="margin-top:12px">
-          <button class="btn-ctrl green" id="btn-start-round" onclick="startRound()">▶ START ROUND</button>
-          <button class="btn-ctrl amber" id="btn-reveal" onclick="revealAnswer()" disabled>👁 REVEAL NOW</button>
-          <button class="btn-ctrl blue"  id="btn-next"   onclick="nextRound()"    disabled>⏭ NEXT ROUND</button>
-          <button class="btn-ctrl red"   onclick="forceReady()">⚡ FORCE READY</button>
+      <!-- Sidebar -->
+      <div class="team-sidebar">
+        <div class="score-card">
+          <div class="score-label">SCORE</div>
+          <div class="score-value" id="team-score-disp">0</div>
+          <div class="score-rank" id="team-rank-disp">Rank —</div>
         </div>
-        <div class="answer-reveal-block">
-          <div class="answer-reveal-label">CORRECT ANSWER</div>
-          <div id="admin-answer-display" class="answer-hidden">Hidden until reveal</div>
+        <div class="sidebar-section">
+          <div class="sidebar-title">⚡ SPECIAL CARDS</div>
+          <div class="cards-phase-note" id="cards-phase-note">Cards unlock during Sabotage Pulse</div>
+          <div id="team-cards-list"></div>
+          <div class="unused-warning" id="unused-warning" style="display:none">⚠ Unused cards = −2 pts each!</div>
+        </div>
+        <div class="sidebar-section">
+          <div class="sidebar-title">📋 ROUND HISTORY</div>
+          <div id="team-history"></div>
         </div>
       </div>
-      <div class="control-block">
-        <div class="block-title">LIVE DECISIONS — <span id="voted-count">0</span>/<span id="total-count">0</span> submitted</div>
-        <div id="admin-decisions"></div>
-      </div>
-      <div class="control-block">
-        <div class="block-title">SCENARIO PREVIEW</div>
-        <div id="admin-scenario-preview" class="scenario-preview-text dim">Select a scenario.</div>
-      </div>
-    </div>
-    <div class="admin-right">
-      <div class="panel-title">TEAMS <span style="color:var(--muted);font-size:10px;font-weight:normal">(click to override)</span></div>
-      <div id="admin-teams-list"></div>
-      <div class="panel-divider"></div>
-      <div class="panel-title">🏆 LEADERBOARD</div>
-      <div id="admin-leaderboard"></div>
     </div>
   </div>
-</div>
 
-<!-- ═══════ PROJECTOR ═══════ -->
-<div id="projector-screen" class="screen projector">
-  <nav class="topnav proj-nav">
-    <div class="nav-logo"><span class="logo-chaos">CHAOS</span> OR <span class="logo-release">RELEASE?</span></div>
-    <div class="nav-center"><span class="admin-state-pill" id="proj-state-pill">LOBBY</span></div>
-    <div class="nav-right">
-      <div class="conn-indicator" id="proj-conn-indicator"></div>
-      <button class="btn-nav" onclick="showAdminFromProjector()">⚙ Admin</button>
-    </div>
-  </nav>
-  <div class="proj-layout">
-    <div class="proj-main">
-      <div class="proj-meta" id="proj-level-tag">STANDBY — AWAITING MISSION</div>
-      <div class="proj-title" id="proj-title">Chaos or Release?</div>
-      <div class="proj-body" id="proj-body">Guide FlowPay from a scrappy startup to a global payment platform.<br>Every DevOps decision your team makes shapes the company's fate.</div>
-      <div class="proj-timer-block">
-        <div class="proj-timer" id="proj-timer">—</div>
-        <div class="proj-phase-label" id="proj-phase-label"></div>
-        <div class="timer-track proj-track"><div class="timer-fill" id="proj-timer-fill" style="width:100%"></div></div>
+  <!-- ═══════ ADMIN PANEL ═══════ -->
+  <div id="admin-screen" class="screen">
+    <nav class="topnav">
+      <div class="nav-logo">⚙ <span class="logo-chaos">ADMIN</span> PANEL</div>
+      <div class="nav-center"><span class="admin-state-pill" id="admin-state-pill">LOBBY</span></div>
+      <div class="nav-right">
+        <div class="conn-indicator" id="admin-conn-indicator"></div>
+        <button class="btn-nav green" onclick="showProjectorFromAdmin()">📡 Projector</button>
+        <button class="btn-nav amber" onclick="openAddTeamModal()">+ Team</button>
+        <button class="btn-nav red" onclick="resetGame()">↺ Reset</button>
+        <button class="btn-nav" onclick="logout()">← Exit</button>
       </div>
-      <div class="proj-decisions-block">
-        <div class="proj-dec-label">LIVE DECISIONS</div>
-        <div class="proj-decisions-grid" id="proj-decisions"></div>
+    </nav>
+    <div class="admin-layout">
+      <div class="admin-left">
+        <div class="panel-title">LEVELS</div>
+        <div id="level-list"></div>
+        <div class="panel-divider"></div>
+        <div class="panel-title">SCENARIOS</div>
+        <div id="scenario-list"></div>
       </div>
-      <div id="proj-answer-reveal" style="display:none">
-        <div class="proj-answer-banner" id="proj-answer-banner"></div>
+      <div class="admin-center">
+        <div class="control-block">
+          <div class="big-timer" id="admin-timer-big">—</div>
+          <div class="timer-track" style="margin:12px 0">
+            <div class="timer-fill" id="admin-timer-bar" style="width:100%"></div>
+          </div>
+          <div class="phase-indicator" id="admin-phase-indicator">LOBBY</div>
+          <div class="ctrl-btns" style="margin-top:12px">
+            <button class="btn-ctrl green" id="btn-start-round" onclick="startRound()">▶ START ROUND</button>
+            <button class="btn-ctrl amber" id="btn-reveal" onclick="revealAnswer()" disabled>👁 REVEAL NOW</button>
+            <button class="btn-ctrl blue" id="btn-next" onclick="nextRound()" disabled>⏭ NEXT ROUND</button>
+            <button class="btn-ctrl red" onclick="forceReady()">⚡ FORCE READY</button>
+          </div>
+          <div class="answer-reveal-block">
+            <div class="answer-reveal-label">CORRECT ANSWER</div>
+            <div id="admin-answer-display" class="answer-hidden">Hidden until reveal</div>
+          </div>
+        </div>
+        <div class="control-block">
+          <div class="block-title">LIVE DECISIONS — <span id="voted-count">0</span>/<span id="total-count">0</span>
+            submitted</div>
+          <div id="admin-decisions"></div>
+        </div>
+        <div class="control-block">
+          <div class="block-title">SCENARIO PREVIEW</div>
+          <div id="admin-scenario-preview" class="scenario-preview-text dim">Select a scenario.</div>
+        </div>
+      </div>
+      <div class="admin-right">
+        <div class="panel-title">TEAMS <span style="color:var(--muted);font-size:10px;font-weight:normal">(click to
+            override)</span></div>
+        <div id="admin-teams-list"></div>
+        <div class="panel-divider"></div>
+        <div class="panel-title">🏆 LEADERBOARD</div>
+        <div id="admin-leaderboard"></div>
       </div>
     </div>
-    <div class="proj-sidebar">
-      <div class="proj-lb-title">🏆 LEADERBOARD</div>
-      <div id="proj-leaderboard"></div>
+  </div>
+
+  <!-- ═══════ PROJECTOR ═══════ -->
+  <div id="projector-screen" class="screen projector">
+    <nav class="topnav proj-nav">
+      <div class="nav-logo"><span class="logo-chaos">CHAOS</span> OR <span class="logo-release">RELEASE?</span></div>
+      <div class="nav-center"><span class="admin-state-pill" id="proj-state-pill">LOBBY</span></div>
+      <div class="nav-right">
+        <div class="conn-indicator" id="proj-conn-indicator"></div>
+        <button class="btn-nav" onclick="showAdminFromProjector()">⚙ Admin</button>
+      </div>
+    </nav>
+    <div class="proj-layout">
+      <div class="proj-main">
+        <div class="proj-meta" id="proj-level-tag">STANDBY — AWAITING MISSION</div>
+        <div class="proj-title" id="proj-title">Chaos or Release?</div>
+        <div class="proj-body" id="proj-body">Guide FlowPay from a scrappy startup to a global payment
+          platform.<br>Every DevOps decision your team makes shapes the company's fate.</div>
+        <div class="proj-timer-block">
+          <div class="proj-timer" id="proj-timer">—</div>
+          <div class="proj-phase-label" id="proj-phase-label"></div>
+          <div class="timer-track proj-track">
+            <div class="timer-fill" id="proj-timer-fill" style="width:100%"></div>
+          </div>
+        </div>
+        <div class="proj-decisions-block">
+          <div class="proj-dec-label">LIVE DECISIONS</div>
+          <div class="proj-decisions-grid" id="proj-decisions"></div>
+        </div>
+        <div id="proj-answer-reveal" style="display:none">
+          <div class="proj-answer-banner" id="proj-answer-banner"></div>
+        </div>
+      </div>
+      <div class="proj-sidebar">
+        <div class="proj-lb-title">🏆 LEADERBOARD</div>
+        <div id="proj-leaderboard"></div>
+      </div>
     </div>
   </div>
-</div>
 
-<!-- ═══════ CARD MODAL (55-cell targeting grid) ═══════ -->
-<div class="modal-overlay" id="card-modal">
-  <div class="modal-box modal-wide">
-    <div class="modal-title" id="modal-title">Use Card</div>
-    <div class="modal-sub" id="modal-sub">Select a target.</div>
-    <div class="targeting-grid" id="targeting-grid"></div>
-    <div class="modal-btns">
-      <button class="btn-nav" onclick="closeModal()">Cancel</button>
-      <button class="btn-ctrl amber" id="modal-confirm-btn" onclick="confirmCard()" disabled>⚡ CONFIRM TARGET</button>
+  <!-- ═══════ CARD MODAL (55-cell targeting grid) ═══════ -->
+  <div class="modal-overlay" id="card-modal">
+    <div class="modal-box modal-wide">
+      <div class="modal-title" id="modal-title">Use Card</div>
+      <div class="modal-sub" id="modal-sub">Select a target.</div>
+      <div class="targeting-grid" id="targeting-grid"></div>
+      <div class="modal-btns">
+        <button class="btn-nav" onclick="closeModal()">Cancel</button>
+        <button class="btn-ctrl amber" id="modal-confirm-btn" onclick="confirmCard()" disabled>⚡ CONFIRM TARGET</button>
+      </div>
     </div>
   </div>
-</div>
 
-<!-- ═══════ ADD TEAM MODAL ═══════ -->
-<div class="modal-overlay" id="add-team-modal">
-  <div class="modal-box" style="width:420px">
-    <div class="modal-title">Manage Teams</div>
-    <div class="modal-sub">Add or remove teams.</div>
-    <input class="field-input" id="new-team-name" placeholder="Team name" style="margin-bottom:8px" />
-    <input class="field-input" id="new-team-pass" placeholder="Password (default: name lowercase)" style="margin-bottom:12px" />
-    <button class="btn-ctrl green" style="width:100%;margin-bottom:16px" onclick="addTeamFromModal()">+ Add Team</button>
-    <div class="panel-title" style="margin-bottom:8px">Current Teams</div>
-    <div id="modal-team-list" style="max-height:200px;overflow-y:auto"></div>
-    <div class="modal-btns" style="margin-top:16px">
-      <button class="btn-nav" onclick="document.getElementById('add-team-modal').classList.remove('open')">Done</button>
+  <!-- ═══════ ADD TEAM MODAL ═══════ -->
+  <div class="modal-overlay" id="add-team-modal">
+    <div class="modal-box" style="width:420px">
+      <div class="modal-title">Manage Teams</div>
+      <div class="modal-sub">Add or remove teams.</div>
+      <input class="field-input" id="new-team-name" placeholder="Team name" style="margin-bottom:8px" />
+      <input class="field-input" id="new-team-pass" placeholder="Password (default: name lowercase)"
+        style="margin-bottom:12px" />
+      <button class="btn-ctrl green" style="width:100%;margin-bottom:16px" onclick="addTeamFromModal()">+ Add
+        Team</button>
+      <div class="panel-title" style="margin-bottom:8px">Current Teams</div>
+      <div id="modal-team-list" style="max-height:200px;overflow-y:auto"></div>
+      <div class="modal-btns" style="margin-top:16px">
+        <button class="btn-nav"
+          onclick="document.getElementById('add-team-modal').classList.remove('open')">Done</button>
+      </div>
     </div>
   </div>
-</div>
 
-<!-- ═══════ SCORE OVERRIDE MODAL ═══════ -->
-<div class="modal-overlay" id="override-modal">
-  <div class="modal-box">
-    <div class="modal-title">Manual Score Override</div>
-    <div class="modal-sub" id="override-team-label">Team</div>
-    <input class="field-input" id="override-score-input" type="number" placeholder="New score" style="margin-bottom:12px" />
-    <div class="modal-btns">
-      <button class="btn-nav" onclick="closeOverrideModal()">Cancel</button>
-      <button class="btn-ctrl amber" onclick="confirmOverride()">✓ Apply</button>
+  <!-- ═══════ SCORE OVERRIDE MODAL ═══════ -->
+  <div class="modal-overlay" id="override-modal">
+    <div class="modal-box">
+      <div class="modal-title">Manual Score Override</div>
+      <div class="modal-sub" id="override-team-label">Team</div>
+      <input class="field-input" id="override-score-input" type="number" placeholder="New score"
+        style="margin-bottom:12px" />
+      <div class="modal-btns">
+        <button class="btn-nav" onclick="closeOverrideModal()">Cancel</button>
+        <button class="btn-ctrl amber" onclick="confirmOverride()">✓ Apply</button>
+      </div>
     </div>
   </div>
-</div>
 
-<script src="/socket.io/socket.io.js"></script>
-<script src="scenarios.js"></script>
-<script src="client.js"></script>
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="scenarios.js"></script>
+  <script src="client.js"></script>
 </body>
+
 </html>
