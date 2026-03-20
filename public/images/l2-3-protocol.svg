@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 420" style="background:#0a0b0d;font-family:'Share Tech Mono',monospace;">
+  <text x="400" y="28" text-anchor="middle" fill="#28c840" font-size="13" letter-spacing="3">TRANSPORT LAYER PROTOCOL ANALYZER</text>
+
+  <!-- User side -->
+  <rect x="30" y="70" width="130" height="100" rx="6" fill="#0a1535" stroke="#3b82f6" stroke-width="2"/>
+  <text x="95" y="92" text-anchor="middle" fill="#3b82f6" font-size="10" letter-spacing="1">USER REQUEST</text>
+  <rect x="45" y="100" width="100" height="22" rx="3" fill="#141820" stroke="#3b82f6" stroke-width="1"/>
+  <text x="95" y="115" text-anchor="middle" fill="#3b82f6" font-size="9">HTTPS://...</text>
+  <text x="95" y="136" text-anchor="middle" fill="#3b82f6" font-size="9">Protocol:</text>
+  <text x="95" y="150" text-anchor="middle" fill="#28c840" font-size="11" font-weight="bold">TCP + TLS</text>
+  <text x="95" y="162" text-anchor="middle" fill="#1a3060" font-size="8">(Secure/Reliable)</text>
+
+  <!-- Arrow with HTTPS packets -->
+  <line x1="162" y1="120" x2="270" y2="120" stroke="#3b82f6" stroke-width="2"/>
+  <polygon points="268,115 280,120 268,125" fill="#3b82f6"/>
+  <rect x="175" y="104" width="60" height="14" rx="2" fill="#0a1535" stroke="#3b82f6" stroke-width="1"/>
+  <text x="205" y="115" text-anchor="middle" fill="#3b82f6" font-size="8">HTTPS PKT</text>
+  <text x="205" y="136" text-anchor="middle" fill="#3b82f6" font-size="8">TCP:443</text>
+
+  <!-- Transport Layer Box -->
+  <rect x="280" y="50" width="250" height="220" rx="6" fill="#1a0a0a" stroke="#e5341a" stroke-width="2.5"/>
+  <text x="405" y="74" text-anchor="middle" fill="#e5341a" font-size="11" letter-spacing="2">TRANSPORT LAYER</text>
+  <text x="405" y="90" text-anchor="middle" fill="#7a2010" font-size="9">Current Configuration</text>
+
+  <!-- Protocol allowed badge -->
+  <rect x="305" y="100" width="200" height="50" rx="4" fill="#1a0505" stroke="#e5341a" stroke-width="1.5"/>
+  <text x="405" y="120" text-anchor="middle" fill="#e5341a" font-size="10" letter-spacing="1">ALLOWED PROTOCOL:</text>
+  <text x="405" y="140" text-anchor="middle" fill="#e5341a" font-size="20" font-weight="bold">UDP</text>
+
+  <!-- Protocol properties -->
+  <rect x="295" y="162" width="220" height="90" rx="4" fill="#141820" stroke="#333" stroke-width="1"/>
+  <text x="405" y="178" text-anchor="middle" fill="#f59e0b" font-size="9" letter-spacing="1">UDP CHARACTERISTICS:</text>
+  <text x="305" y="194" fill="#7a5500" font-size="9">✕ No connection handshake</text>
+  <text x="305" y="208" fill="#7a5500" font-size="9">✕ No delivery guarantee</text>
+  <text x="305" y="222" fill="#7a5500" font-size="9">✕ No error recovery</text>
+  <text x="305" y="236" fill="#7a5500" font-size="9">✓ Fast (video/gaming use)</text>
+
+  <!-- BLOCKED X -->
+  <line x1="530" y1="110" x2="565" y2="145" stroke="#e5341a" stroke-width="3"/>
+  <line x1="565" y1="110" x2="530" y2="145" stroke="#e5341a" stroke-width="3"/>
+
+  <!-- Dropped packets -->
+  <rect x="545" y="100" width="90" height="60" rx="4" fill="#1a0505" stroke="#e5341a" stroke-width="1"/>
+  <text x="590" y="118" text-anchor="middle" fill="#e5341a" font-size="9">PACKETS</text>
+  <text x="590" y="132" text-anchor="middle" fill="#e5341a" font-size="9">DROPPED</text>
+  <text x="590" y="150" text-anchor="middle" fill="#e5341a" font-size="18">✕</text>
+
+  <!-- Server side -->
+  <rect x="660" y="70" width="120" height="100" rx="6" fill="#141820" stroke="#555" stroke-width="1.5"/>
+  <text x="720" y="92" text-anchor="middle" fill="#555" font-size="10" letter-spacing="1">HTTPS SERVER</text>
+  <text x="720" y="115" text-anchor="middle" fill="#555" font-size="9">Expects: TCP</text>
+  <text x="720" y="130" text-anchor="middle" fill="#555" font-size="9">Port: 443</text>
+  <text x="720" y="150" text-anchor="middle" fill="#e5341a" font-size="10">NO TRAFFIC</text>
+  <text x="720" y="163" text-anchor="middle" fill="#e5341a" font-size="9">RECEIVED</text>
+
+  <!-- TCP reference box -->
+  <rect x="30" y="290" width="340" height="100" rx="4" fill="#0a1535" stroke="#3b82f6" stroke-width="1"/>
+  <text x="200" y="310" text-anchor="middle" fill="#3b82f6" font-size="10" letter-spacing="1">TCP REQUIRED FOR HTTPS:</text>
+  <text x="50" y="328" fill="#3b82f6" font-size="9">✓ 3-Way Handshake (SYN/SYN-ACK/ACK)</text>
+  <text x="50" y="344" fill="#3b82f6" font-size="9">✓ Guaranteed packet delivery</text>
+  <text x="50" y="360" fill="#3b82f6" font-size="9">✓ TLS encryption layer runs over TCP</text>
+  <text x="50" y="376" fill="#3b82f6" font-size="9">✓ Required for secure HTTPS connections</text>
+
+  <!-- Question box -->
+  <rect x="390" y="290" width="380" height="100" rx="4" fill="#1a0a0a" stroke="#e5341a" stroke-width="1"/>
+  <text x="580" y="310" text-anchor="middle" fill="#e5341a" font-size="10" letter-spacing="1">IDENTIFY THE ALLOWED PROTOCOL</text>
+  <text x="580" y="330" text-anchor="middle" fill="#7a2010" font-size="9">Users connecting via HTTPS (secure)</text>
+  <text x="580" y="348" text-anchor="middle" fill="#7a2010" font-size="9">Packets dropped at Transport Layer</text>
+  <text x="580" y="366" text-anchor="middle" fill="#7a2010" font-size="9">Transport Layer allows only:</text>
+  <text x="580" y="384" text-anchor="middle" fill="#e5341a" font-size="12" letter-spacing="3">???</text>
+</svg>

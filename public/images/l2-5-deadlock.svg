@@ -1,0 +1,62 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 420" style="background:#0a0b0d;font-family:'Share Tech Mono',monospace;">
+  <text x="400" y="28" text-anchor="middle" fill="#28c840" font-size="13" letter-spacing="3">DATABASE ENGINE — TRANSACTION MONITOR</text>
+
+  <!-- Status badge -->
+  <rect x="300" y="38" width="200" height="28" rx="4" fill="#1a0505" stroke="#e5341a" stroke-width="1.5"/>
+  <text x="400" y="57" text-anchor="middle" fill="#e5341a" font-size="11" letter-spacing="2">✕ ALL WRITES HALTED</text>
+
+  <!-- Transaction A -->
+  <rect x="80" y="100" width="180" height="120" rx="6" fill="#0a1535" stroke="#3b82f6" stroke-width="2"/>
+  <text x="170" y="122" text-anchor="middle" fill="#3b82f6" font-size="11" letter-spacing="1">TRANSACTION A</text>
+  <text x="170" y="140" text-anchor="middle" fill="#3b82f6" font-size="9">Process: Order #4471</text>
+  <rect x="95" y="148" width="150" height="20" rx="3" fill="#141820" stroke="#3b82f6" stroke-width="1"/>
+  <text x="170" y="162" text-anchor="middle" fill="#28c840" font-size="9">🔒 HOLDS: Lock on</text>
+  <text x="170" y="176" text-anchor="middle" fill="#28c840" font-size="9">TABLE: payments</text>
+  <rect x="95" y="182" width="150" height="20" rx="3" fill="#1a0505" stroke="#e5341a" stroke-width="1"/>
+  <text x="170" y="196" text-anchor="middle" fill="#e5341a" font-size="9">⏳ WAITING FOR:</text>
+  <text x="170" y="208" text-anchor="middle" fill="#e5341a" font-size="9">TABLE: orders</text>
+
+  <!-- Transaction B -->
+  <rect x="540" y="100" width="180" height="120" rx="6" fill="#1a0535" stroke="#8b5cf6" stroke-width="2"/>
+  <text x="630" y="122" text-anchor="middle" fill="#8b5cf6" font-size="11" letter-spacing="1">TRANSACTION B</text>
+  <text x="630" y="140" text-anchor="middle" fill="#8b5cf6" font-size="9">Process: Refund #8832</text>
+  <rect x="555" y="148" width="150" height="20" rx="3" fill="#141820" stroke="#8b5cf6" stroke-width="1"/>
+  <text x="630" y="162" text-anchor="middle" fill="#28c840" font-size="9">🔒 HOLDS: Lock on</text>
+  <text x="630" y="176" text-anchor="middle" fill="#28c840" font-size="9">TABLE: orders</text>
+  <rect x="555" y="182" width="150" height="20" rx="3" fill="#1a0505" stroke="#e5341a" stroke-width="1"/>
+  <text x="630" y="196" text-anchor="middle" fill="#e5341a" font-size="9">⏳ WAITING FOR:</text>
+  <text x="630" y="208" text-anchor="middle" fill="#e5341a" font-size="9">TABLE: payments</text>
+
+  <!-- Circular arrows -->
+  <!-- Arrow A waiting for B's lock (top arc) -->
+  <path d="M 262 130 Q 400 60 538 130" fill="none" stroke="#e5341a" stroke-width="2.5" stroke-dasharray="8,4"/>
+  <polygon points="534,124 542,136 524,132" fill="#e5341a"/>
+  <text x="400" y="72" text-anchor="middle" fill="#e5341a" font-size="10">Transaction A waits for orders lock</text>
+
+  <!-- Arrow B waiting for A's lock (bottom arc) -->
+  <path d="M 538 210 Q 400 290 262 210" fill="none" stroke="#e5341a" stroke-width="2.5" stroke-dasharray="8,4"/>
+  <polygon points="268,206 260,218 276,216" fill="#e5341a"/>
+  <text x="400" y="285" text-anchor="middle" fill="#e5341a" font-size="10">Transaction B waits for payments lock</text>
+
+  <!-- Center deadlock symbol -->
+  <circle cx="400" cy="170" r="45" fill="#1a0505" stroke="#e5341a" stroke-width="2"/>
+  <text x="400" y="162" text-anchor="middle" fill="#e5341a" font-size="12" font-weight="bold">DEAD</text>
+  <text x="400" y="178" text-anchor="middle" fill="#e5341a" font-size="12" font-weight="bold">LOCK</text>
+  <text x="400" y="194" text-anchor="middle" fill="#7a2010" font-size="9">∞ loop</text>
+
+  <!-- Queue of waiting transactions -->
+  <rect x="50" y="310" width="300" height="90" rx="4" fill="#0e1117" stroke="#f59e0b" stroke-width="1"/>
+  <text x="200" y="330" text-anchor="middle" fill="#f59e0b" font-size="10" letter-spacing="1">WAITING QUEUE (BLOCKED)</text>
+  <text x="70" y="350" fill="#7a5500" font-size="9">Transaction C — Payment #2201 — waiting...</text>
+  <text x="70" y="366" fill="#7a5500" font-size="9">Transaction D — Order #9912 — waiting...</text>
+  <text x="70" y="382" fill="#7a5500" font-size="9">Transaction E — Refund #4401 — waiting...</text>
+  <text x="200" y="396" text-anchor="middle" fill="#7a2010" font-size="8">+847 more transactions queued</text>
+
+  <!-- DB stats -->
+  <rect x="460" y="310" width="310" height="90" rx="4" fill="#1a0505" stroke="#e5341a" stroke-width="1"/>
+  <text x="615" y="330" text-anchor="middle" fill="#e5341a" font-size="10" letter-spacing="1">DB ENGINE STATUS</text>
+  <text x="475" y="350" fill="#e5341a" font-size="9">Writes processed: 0/sec (halted)</text>
+  <text x="475" y="366" fill="#e5341a" font-size="9">Transactions waiting: 850+</text>
+  <text x="475" y="382" fill="#e5341a" font-size="9">Time in deadlock: 4m 32s</text>
+  <text x="615" y="396" text-anchor="middle" fill="#7a2010" font-size="8">Revenue impact: growing every second</text>
+</svg>

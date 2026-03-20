@@ -1,0 +1,79 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 420" style="background:#0a0b0d;font-family:'Share Tech Mono',monospace;">
+  <text x="400" y="28" text-anchor="middle" fill="#28c840" font-size="13" letter-spacing="3">LOAD BALANCER — TRAFFIC DISTRIBUTION</text>
+
+  <!-- Users -->
+  <rect x="20" y="160" width="90" height="60" rx="4" fill="#0a1535" stroke="#3b82f6" stroke-width="1.5"/>
+  <text x="65" y="182" text-anchor="middle" fill="#3b82f6" font-size="9">USERS</text>
+  <text x="65" y="198" text-anchor="middle" fill="#3b82f6" font-size="18">👥</text>
+  <text x="65" y="213" text-anchor="middle" fill="#3b82f6" font-size="8">10,000 req/s</text>
+
+  <!-- Arrow to LB -->
+  <line x1="112" y1="190" x2="180" y2="190" stroke="#3b82f6" stroke-width="2"/>
+  <polygon points="178,185 190,190 178,195" fill="#3b82f6"/>
+
+  <!-- Load Balancer -->
+  <rect x="190" y="145" width="130" height="90" rx="6" fill="#141820" stroke="#f59e0b" stroke-width="2"/>
+  <text x="255" y="167" text-anchor="middle" fill="#f59e0b" font-size="10" letter-spacing="1">LOAD</text>
+  <text x="255" y="181" text-anchor="middle" fill="#f59e0b" font-size="10" letter-spacing="1">BALANCER</text>
+  <text x="255" y="200" text-anchor="middle" fill="#f59e0b" font-size="8">Round-Robin</text>
+  <rect x="205" y="206" width="100" height="18" rx="2" fill="#1a1000" stroke="#f59e0b" stroke-width="1"/>
+  <text x="255" y="219" text-anchor="middle" fill="#f59e0b" font-size="8">33% → A · B · C</text>
+
+  <!-- Arrow to Server A -->
+  <line x1="320" y1="170" x2="420" y2="100" stroke="#28c840" stroke-width="2"/>
+  <polygon points="415,96 428,98 420,110" fill="#28c840"/>
+  <text x="360" y="126" fill="#28c840" font-size="9">33%</text>
+
+  <!-- Arrow to Server B -->
+  <line x1="322" y1="190" x2="420" y2="190" stroke="#28c840" stroke-width="2"/>
+  <polygon points="418,185 430,190 418,195" fill="#28c840"/>
+  <text x="365" y="184" fill="#28c840" font-size="9">33%</text>
+
+  <!-- Arrow to Server C -->
+  <line x1="320" y1="210" x2="420" y2="280" stroke="#e5341a" stroke-width="2" stroke-dasharray="5,3"/>
+  <polygon points="415,274 428,282 418,270" fill="#e5341a"/>
+  <text x="355" y="262" fill="#e5341a" font-size="9">33%</text>
+
+  <!-- Server A - Healthy -->
+  <rect x="430" y="55" width="130" height="80" rx="6" fill="#0a1208" stroke="#28c840" stroke-width="2"/>
+  <text x="495" y="78" text-anchor="middle" fill="#28c840" font-size="12" letter-spacing="1">SERVER A</text>
+  <text x="495" y="96" text-anchor="middle" fill="#28c840" font-size="9">Status: ● HEALTHY</text>
+  <text x="495" y="112" text-anchor="middle" fill="#28c840" font-size="9">CPU: 45% · RAM: 60%</text>
+  <text x="495" y="126" text-anchor="middle" fill="#28c840" font-size="8">Responding: 200 OK</text>
+
+  <!-- Server B - Healthy -->
+  <rect x="430" y="150" width="130" height="80" rx="6" fill="#0a1208" stroke="#28c840" stroke-width="2"/>
+  <text x="495" y="173" text-anchor="middle" fill="#28c840" font-size="12" letter-spacing="1">SERVER B</text>
+  <text x="495" y="191" text-anchor="middle" fill="#28c840" font-size="9">Status: ● HEALTHY</text>
+  <text x="495" y="207" text-anchor="middle" fill="#28c840" font-size="9">CPU: 51% · RAM: 58%</text>
+  <text x="495" y="221" text-anchor="middle" fill="#28c840" font-size="8">Responding: 200 OK</text>
+
+  <!-- Server C - DEAD -->
+  <rect x="430" y="245" width="130" height="90" rx="6" fill="#1a0505" stroke="#e5341a" stroke-width="2.5"/>
+  <text x="495" y="268" text-anchor="middle" fill="#e5341a" font-size="12" letter-spacing="1">SERVER C</text>
+  <text x="495" y="286" text-anchor="middle" fill="#e5341a" font-size="9">Status: ✕ DEAD</text>
+  <text x="495" y="302" text-anchor="middle" fill="#e5341a" font-size="9">CPU: 0% · RAM: 0%</text>
+  <text x="495" y="318" text-anchor="middle" fill="#e5341a" font-size="8">Responding: NO RESPONSE</text>
+  <text x="495" y="328" text-anchor="middle" fill="#e5341a" font-size="8">Still in rotation!</text>
+
+  <!-- 502 error cloud -->
+  <rect x="600" y="245" width="170" height="100" rx="6" fill="#1a0505" stroke="#e5341a" stroke-width="2"/>
+  <text x="685" y="270" text-anchor="middle" fill="#e5341a" font-size="24" font-weight="bold">502</text>
+  <text x="685" y="292" text-anchor="middle" fill="#e5341a" font-size="11">BAD GATEWAY</text>
+  <text x="685" y="310" text-anchor="middle" fill="#7a2010" font-size="9">33% of users see this</text>
+  <text x="685" y="326" text-anchor="middle" fill="#7a2010" font-size="9">when hitting Server C</text>
+  <text x="685" y="340" text-anchor="middle" fill="#7a2010" font-size="9">LB doesn't know it's dead</text>
+
+  <!-- Arrow from Server C to 502 -->
+  <line x1="562" y1="290" x2="598" y2="290" stroke="#e5341a" stroke-width="1.5" stroke-dasharray="4,3"/>
+  <polygon points="596,285 610,290 596,295" fill="#e5341a"/>
+
+  <!-- Stats panel -->
+  <rect x="20" y="290" width="160" height="100" rx="4" fill="#0e1117" stroke="#f59e0b" stroke-width="1"/>
+  <text x="100" y="310" text-anchor="middle" fill="#f59e0b" font-size="10" letter-spacing="1">ERROR RATE</text>
+  <text x="100" y="335" text-anchor="middle" fill="#e5341a" font-size="28" font-weight="bold">33%</text>
+  <text x="100" y="358" text-anchor="middle" fill="#7a2010" font-size="9">of all requests</text>
+  <text x="100" y="374" text-anchor="middle" fill="#7a2010" font-size="9">failing with 502</text>
+
+  <text x="400" y="390" text-anchor="middle" fill="#f59e0b" font-size="11" letter-spacing="2">IDENTIFY THE ROOT CAUSE OF THE 502 ERRORS</text>
+</svg>

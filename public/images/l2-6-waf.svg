@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 420" style="background:#0a0b0d;font-family:'Share Tech Mono',monospace;">
+  <text x="400" y="28" text-anchor="middle" fill="#28c840" font-size="13" letter-spacing="3">WEB APPLICATION FIREWALL — TRAFFIC ANALYSIS</text>
+
+  <!-- WAF Shield -->
+  <polygon points="400,55 480,85 480,155 400,185 320,155 320,85" fill="#141820" stroke="#f59e0b" stroke-width="2.5"/>
+  <text x="400" y="105" text-anchor="middle" fill="#f59e0b" font-size="11" letter-spacing="1">WAF</text>
+  <text x="400" y="121" text-anchor="middle" fill="#f59e0b" font-size="9">Rule Engine v2.4.1</text>
+  <text x="400" y="137" text-anchor="middle" fill="#e5341a" font-size="8">NEW REGEX ACTIVE</text>
+  <text x="400" y="153" text-anchor="middle" fill="#7a5500" font-size="8">BLOCK: apostrophes</text>
+
+  <!-- Legitimate users BLOCKED -->
+  <rect x="30" y="80" width="200" height="130" rx="6" fill="#1a0505" stroke="#e5341a" stroke-width="2"/>
+  <text x="130" y="102" text-anchor="middle" fill="#e5341a" font-size="10" letter-spacing="1">BLOCKED USERS</text>
+  <text x="130" y="120" text-anchor="middle" fill="#7a2010" font-size="9">Legitimate customers</text>
+
+  <rect x="45" y="128" width="170" height="22" rx="3" fill="#141820" stroke="#e5341a" stroke-width="1"/>
+  <text x="130" y="143" text-anchor="middle" fill="#e5341a" font-size="10">O'Reilly, Patrick</text>
+
+  <rect x="45" y="156" width="170" height="22" rx="3" fill="#141820" stroke="#e5341a" stroke-width="1"/>
+  <text x="130" y="171" text-anchor="middle" fill="#e5341a" font-size="10">D'Angelo, Maria</text>
+
+  <rect x="45" y="184" width="170" height="22" rx="3" fill="#141820" stroke="#e5341a" stroke-width="1"/>
+  <text x="130" y="199" text-anchor="middle" fill="#e5341a" font-size="10">O'Brien, Connor</text>
+
+  <!-- Arrows blocked -->
+  <line x1="232" y1="120" x2="318" y2="120" stroke="#e5341a" stroke-width="2" stroke-dasharray="5,3"/>
+  <text x="275" y="112" text-anchor="middle" fill="#e5341a" font-size="18">✕</text>
+  <line x1="232" y1="167" x2="318" y2="130" stroke="#e5341a" stroke-width="2" stroke-dasharray="5,3"/>
+  <line x1="232" y1="195" x2="318" y2="140" stroke="#e5341a" stroke-width="2" stroke-dasharray="5,3"/>
+
+  <!-- Attacker ALSO blocked -->
+  <rect x="570" y="80" width="200" height="130" rx="6" fill="#0a1208" stroke="#28c840" stroke-width="2"/>
+  <text x="670" y="102" text-anchor="middle" fill="#28c840" font-size="10" letter-spacing="1">ATTACK ATTEMPT</text>
+  <text x="670" y="120" text-anchor="middle" fill="#3a5025" font-size="9">SQL Injection attempt</text>
+
+  <rect x="585" y="128" width="170" height="22" rx="3" fill="#141820" stroke="#28c840" stroke-width="1"/>
+  <text x="670" y="143" text-anchor="middle" fill="#28c840" font-size="9">'; DROP TABLE users --</text>
+
+  <rect x="585" y="156" width="170" height="22" rx="3" fill="#141820" stroke="#28c840" stroke-width="1"/>
+  <text x="670" y="171" text-anchor="middle" fill="#28c840" font-size="9">admin'--</text>
+
+  <text x="670" y="198" text-anchor="middle" fill="#28c840" font-size="9">Both blocked by WAF</text>
+
+  <!-- Arrows from attacker -->
+  <line x1="568" y1="130" x2="482" y2="120" stroke="#28c840" stroke-width="2" stroke-dasharray="5,3"/>
+  <text x="525" y="112" text-anchor="middle" fill="#28c840" font-size="18">✕</text>
+  <line x1="568" y1="167" x2="482" y2="135" stroke="#28c840" stroke-width="2" stroke-dasharray="5,3"/>
+
+  <!-- WAF Rule box -->
+  <rect x="100" y="240" width="600" height="80" rx="4" fill="#1a1000" stroke="#f59e0b" stroke-width="1.5"/>
+  <text x="400" y="262" text-anchor="middle" fill="#f59e0b" font-size="10" letter-spacing="2">ACTIVE WAF RULE — CAUSES THE PROBLEM</text>
+  <text x="400" y="284" text-anchor="middle" fill="#f59e0b" font-size="11">BLOCK any input containing: apostrophe (</text>
+  <text x="400" y="302" text-anchor="middle" fill="#7a5500" font-size="9">Intended to stop SQL injection. Also blocks Irish, Italian, French surnames with apostrophes.</text>
+  <text x="400" y="316" text-anchor="middle" fill="#7a5500" font-size="9">5% of your customer base affected during BIGGEST SALE OF THE YEAR.</text>
+
+  <!-- Sale event banner -->
+  <rect x="100" y="338" width="600" height="50" rx="4" fill="#1a0505" stroke="#e5341a" stroke-width="1.5"/>
+  <text x="400" y="358" text-anchor="middle" fill="#e5341a" font-size="11" letter-spacing="2">BIGGEST SALE OF THE YEAR — LIVE NOW</text>
+  <text x="400" y="378" text-anchor="middle" fill="#7a2010" font-size="9">5% of customers cannot checkout — revenue loss every minute</text>
+</svg>
