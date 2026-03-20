@@ -590,26 +590,37 @@ function renderImageQuizLevel(team, s, phase) {
   const panel = $('image-quiz-panel');
   panel.style.display = 'block';
 
-  // Render the diagram image/SVG inside scenario card
+  // Render the diagram — fetch SVG and inject inline so internal styles work
   if (s.imageUrl) {
     let existing = document.getElementById('scenario-diagram');
     if (!existing) {
       const imgWrap = document.createElement('div');
       imgWrap.id = 'scenario-diagram';
-      imgWrap.style.cssText = 'margin:12px 0;border:0.5px solid #1a2e10;border-radius:4px;overflow:hidden;background:#060d04;min-height:200px;';
-      // Use object tag so SVG internal styles render correctly
-      const obj = document.createElement('object');
-      obj.data = s.imageUrl;
-      obj.type = 'image/svg+xml';
-      obj.style.cssText = 'width:100%;display:block;min-height:200px;';
-      // Fallback img in case object fails
-      const fallback = document.createElement('img');
-      fallback.src = s.imageUrl;
-      fallback.style.cssText = 'width:100%;display:block;';
-      obj.appendChild(fallback);
-      imgWrap.appendChild(obj);
-      // Insert before quiz panel
+      imgWrap.style.cssText = 'margin:12px 0;border:0.5px solid #1a2e10;border-radius:4px;overflow:hidden;background:#060d04;min-height:200px;display:flex;align-items:center;justify-content:center;';
+      imgWrap.innerHTML = '<div style="color:#28c840;font-size:11px;opacity:0.5;padding:20px;">Loading diagram…</div>';
       panel.parentNode.insertBefore(imgWrap, panel);
+      // Fetch SVG text and inject inline — preserves all internal styles
+      fetch(s.imageUrl)
+        .then(r => r.text())
+        .then(svgText => {
+          const wrap = document.getElementById('scenario-diagram');
+          if (wrap) {
+            wrap.style.minHeight = '';
+            wrap.style.alignItems = '';
+            wrap.style.justifyContent = '';
+            wrap.innerHTML = svgText;
+            const svgEl = wrap.querySelector('svg');
+            if (svgEl) {
+              svgEl.style.width = '100%';
+              svgEl.style.height = 'auto';
+              svgEl.style.display = 'block';
+            }
+          }
+        })
+        .catch(() => {
+          const wrap = document.getElementById('scenario-diagram');
+          if (wrap) wrap.innerHTML = '<div style="color:#e5341a;padding:20px;font-size:11px;">⚠ Diagram failed to load</div>';
+        });
     }
   }
 
