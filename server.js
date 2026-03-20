@@ -1,6 +1,6 @@
 // ═══════════════════════════════════════════════════════
-//  CHAOS OR RELEASE v2 — Server
-//  5-Phase State Machine + Redis Locking + 4 Level Types
+//  CHAOS OR RELEASE v2 — Server (Master Handbook Edition)
+//  Correct phase timings, scoring, Double Risk +10, hoarding penalty
 // ═══════════════════════════════════════════════════════
 
 require('dotenv').config();
@@ -21,11 +21,9 @@ const io = new Server(server, {
 });
 
 app.use(express.json());
+// ── STATIC FILES — always serve from /public ──
 app.use(express.static(path.join(__dirname, 'public')));
-// Explicitly serve SVG diagrams
-app.use('/images', express.static(path.join(__dirname, 'public/images')));
-
-
+app.use('/images', express.static(path.join(__dirname, 'public', 'images')));
 
 // ── FIREBASE ──
 admin.initializeApp({
@@ -53,10 +51,7 @@ try {
   console.warn('⚠️  Redis unavailable, using in-memory fallback');
   redis = null;
 }
-
-// In-memory fallback if Redis unavailable
 const memLocks = new Map();
-
 async function acquireLock(lockKey, ttlMs = 5000) {
   if (redis) {
     const result = await redis.set(lockKey, '1', 'PX', ttlMs, 'NX');
@@ -72,18 +67,27 @@ async function releaseLock(lockKey) {
   else memLocks.delete(lockKey);
 }
 
-// ── PASSWORDS & CONFIG ──
+// ── PASSWORDS ──
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin123';
 const PROJECTOR_PASSWORD = process.env.PROJECTOR_PASSWORD || 'projector123';
 
-// ── PHASE CONFIG ──
-// BRIEFING → BREACH → SABOTAGE_PULSE → AFTERMATH → RECON
-const BREACH_DURATION = 45;  // seconds for main decision window
-const SABOTAGE_PULSE_DURATION = 15; // seconds for card window
-const ROLLBACK_WINDOW = 7;   // seconds rollback button shows
-const TOTAL_ROUND_TIME = BREACH_DURATION + SABOTAGE_PULSE_DURATION;
+// ── PHASE TIMINGS (per handbook) ──
+// Analysis time per level: L1=45s, L2=60s, L3=90s, L4=180s
+// Sabotage = last 15s of analysis (runs concurrently, not added after)
+// Briefing = 60s
+const BRIEFING_DURATION = 60;
+const SABOTAGE_DURATION = 15;
+const ROLLBACK_WINDOW = 7;
+const RECON_DURATION = 15;
+
+const BREACH_DURATION_BY_LEVEL = { 1: 45, 2: 60, 3: 90, 4: 180 };
+
+function getBreachDuration(level) {
+  return BREACH_DURATION_BY_LEVEL[level] || 45;
+}
 
 // ── HELPERS ──
+const clean = obj => JSON.parse(JSON.stringify(obj));
 const key = n => String(n).replace(/[^a-zA-Z0-9_]/g, '_');
 const byLevel = l => SCENARIOS.filter(s => s.level === l);
 const scByIdx = (l, i) => byLevel(l)[i] || null;
@@ -96,9 +100,20 @@ const getRound = gs => {
 // ── SERVER TIMERS ──
 let phaseTimers = [];
 let tickInterval = null;
-function clearAllTimers() { phaseTimers.forEach(t => clearTimeout(t)); phaseTimers = []; clearTick(); }
-function addTimer(fn, ms) { const t = setTimeout(fn, ms); phaseTimers.push(t); return t; }
-function clearTick() { if (tickInterval) { clearInterval(tickInterval); tickInterval = null; } }
+
+function clearAllTimers() {
+  phaseTimers.forEach(t => clearTimeout(t));
+  phaseTimers = [];
+  clearTick();
+}
+function addTimer(fn, ms) {
+  const t = setTimeout(fn, ms);
+  phaseTimers.push(t);
+  return t;
+}
+function clearTick() {
+  if (tickInterval) { clearInterval(tickInterval); tickInterval = null; }
+}
 function startTicking(duration, phase) {
   clearTick();
   let left = duration;
@@ -116,16 +131,19 @@ async function broadcastState() {
   const data = snap.val() || {};
   const gs = data.state || {};
 
-  // Calculate remaining timer so reconnecting clients get correct value
   let timerLeft = 0, timerMax = 0, timerPhase = gs.phase;
-  if (gs.phase === 'BREACH' && gs.breachStartedAt) {
+  if (gs.phase === 'BRIEFING' && gs.briefingStartedAt) {
+    const elapsed = Math.floor((Date.now() - gs.briefingStartedAt) / 1000);
+    timerLeft = Math.max(0, BRIEFING_DURATION - elapsed);
+    timerMax = BRIEFING_DURATION;
+  } else if (gs.phase === 'BREACH' && gs.breachStartedAt) {
     const elapsed = Math.floor((Date.now() - gs.breachStartedAt) / 1000);
-    timerLeft = Math.max(0, (gs.breachDuration || BREACH_DURATION) - elapsed);
-    timerMax = gs.breachDuration || BREACH_DURATION;
+    timerLeft = Math.max(0, (gs.breachDuration || 45) - elapsed);
+    timerMax = gs.breachDuration || 45;
   } else if (gs.phase === 'SABOTAGE_PULSE' && gs.sabotageStartedAt) {
     const elapsed = Math.floor((Date.now() - gs.sabotageStartedAt) / 1000);
-    timerLeft = Math.max(0, (gs.sabotageDuration || SABOTAGE_PULSE_DURATION) - elapsed);
-    timerMax = gs.sabotageDuration || SABOTAGE_PULSE_DURATION;
+    timerLeft = Math.max(0, SABOTAGE_DURATION - elapsed);
+    timerMax = SABOTAGE_DURATION;
   }
 
   io.emit('gameState', {
@@ -151,7 +169,7 @@ async function seedIfEmpty() {
     defaultTeams[key(name)] = {
       name, pass: n.toLowerCase(), score: 0,
       cards: { rollback: true, freeze: true, doublerisk: true },
-      frozen: false, targeted: false, history: [], online: false
+      frozen: false, targeted: false, history: [], online: false,
     };
   });
   await gameRef.set({
@@ -159,16 +177,45 @@ async function seedIfEmpty() {
       phase: 'LOBBY',
       currentLevel: 1,
       currentScenarioIdx: 0,
+      briefingStartedAt: 0,
       breachStartedAt: 0,
       sabotageStartedAt: 0,
-      breachDuration: BREACH_DURATION,
-      sabotageDuration: SABOTAGE_PULSE_DURATION,
+      breachDuration: 45,
+      revealedAnswer: '',
     },
     teams: defaultTeams,
     decisions: null,
     quizAnswers: null,
   });
   console.log('Database seeded.');
+}
+
+// ── HOARDING PENALTY — called at end of Level 4 ──
+async function applyHoardingPenalty() {
+  const snap = await teamsRef.once('value');
+  const teams = snap.val() || {};
+  const updates = {};
+
+  Object.values(teams).forEach(t => {
+    if (!t.online) return;
+    const k = key(t.name);
+    const cards = t.cards || {};
+    let penalty = 0;
+    if (cards.rollback !== false) penalty += 2;
+    if (cards.freeze !== false) penalty += 2;
+    if (cards.doublerisk !== false) penalty += 2;
+    if (penalty > 0) {
+      updates[`game/teams/${k}/score`] = (t.score || 0) - penalty;
+      const history = (t.history || []).map(h => clean(h));
+      history.push({ round: 'END', decision: 'hoarding', pts: -penalty, phase: 'END' });
+      updates[`game/teams/${k}/history`] = history;
+    }
+  });
+
+  if (Object.keys(updates).length > 0) {
+    await db.ref().update(updates);
+    console.log('Hoarding penalties applied');
+  }
 }
 
 // ── SCORING ──
@@ -189,7 +236,7 @@ async function doRevealAnswer() {
 
   const updates = {};
   const now = Date.now();
-  const clean = obj => JSON.parse(JSON.stringify(obj));
+  const breachDuration = gs.breachDuration || getBreachDuration(gs.currentLevel);
 
   Object.values(teams).forEach(t => {
     if (!t.online) return;
@@ -197,7 +244,7 @@ async function doRevealAnswer() {
     const dec = decs[k] || null;
     const history = (t.history || []).map(h => clean(h));
 
-    // Frozen teams — skip scoring, record history, unfreeze for next round
+    // Frozen — skip scoring, unfreeze for next round
     if (t.frozen) {
       history.push({ round: getRound(gs), decision: 'frozen', pts: 0, phase: gs.phase });
       updates[`game/teams/${k}/frozen`] = false;
@@ -205,35 +252,42 @@ async function doRevealAnswer() {
       return;
     }
 
-    // Late submission check
+    // Late check — based on breach window start
     const submittedAt = dec ? (decs[`${k}_timestamp`] || now) : now;
-    const isLate = (submittedAt - (gs.breachStartedAt || 0)) > ((gs.breachDuration || BREACH_DURATION) * 1000);
+    const isLate = (submittedAt - (gs.breachStartedAt || 0)) > (breachDuration * 1000);
 
+    // No submission: -5 (wrong) + -1 (late) = -6
     if (!dec) {
-      // No decision — -1 pt penalty
-      history.push({ round: getRound(gs), decision: 'none', pts: -1, phase: gs.phase });
-      updates[`game/teams/${k}/score`] = (t.score || 0) - 1;
+      const pts = -6;
+      history.push({ round: getRound(gs), decision: 'none', pts, phase: gs.phase });
+      updates[`game/teams/${k}/score`] = (t.score || 0) + pts;
       updates[`game/teams/${k}/history`] = history;
       return;
     }
 
     let pts = 0;
-    // 1. Base score
-    if (dec === s.answer) {
-      pts = 6;
+    const isCorrect = dec === s.answer;
+
+    if (isCorrect) {
+      // Correct: +6, or +10 if Double Risk was played against them
+      pts = t.targeted ? 10 : 6;
     } else {
-      // Double Risk: -8 instead of -5
+      // Wrong: -5, or -8 if Double Risk was played against them
       pts = t.targeted ? -8 : -5;
     }
 
-    // 2. Latency penalty: -1 if submitted late
+    // Latency penalty: -1 if submitted after timer hit 0
     if (isLate) pts -= 1;
 
-    // 3. L3 forensic trail quiz bonuses
+    // L3 forensic trail: +2 per correct clue (independent of final decision)
     if (s.type === 'forensic_trail') {
       const teamQuiz = quiz[k] || {};
       (s.clues || []).forEach((clue, i) => {
-        if (teamQuiz[`clue_${i}`] === clue.correct) pts += (clue.points || 0);
+        const stored = teamQuiz[`clue_${i}`];
+        // eslint-disable-next-line eqeqeq
+        if (stored != null && stored == clue.correct) {
+          pts += (clue.points || 2);
+        }
       });
     }
 
@@ -247,19 +301,23 @@ async function doRevealAnswer() {
   updates['game/state/aftermathStart'] = now;
   updates['game/state/revealedAnswer'] = s.answer || '';
 
-  // Firebase rejects undefined values — strip them before writing
+  // Strip any undefined values before writing to Firebase
   Object.keys(updates).forEach(k => { if (updates[k] === undefined) delete updates[k]; });
 
   await db.ref().update(updates);
+  io.emit('phase', { phase: 'AFTERMATH', revealedAnswer: s.answer || '' });
   await broadcastState();
-  console.log('Aftermath — scores calculated');
+  console.log(`Aftermath — answer: ${s.answer}`);
 
-  // Auto-advance to RECON after 10 seconds
+  // Auto-advance to RECON after 20s (per handbook: Reveal = 20-30s)
   addTimer(async () => {
+    const snap2 = await stateRef.once('value');
+    const curGs = snap2.val() || {};
     await stateRef.update({ phase: 'RECON' });
+    io.emit('phase', { phase: 'RECON', revealedAnswer: curGs.revealedAnswer || '' });
     await broadcastState();
     console.log('Phase: RECON');
-  }, 10000);
+  }, 20000);
 }
 
 // ══════════════════════════════════════════════════════
@@ -335,13 +393,14 @@ io.on('connection', async (socket) => {
       await quizRef.child(key(socket.teamName)).child(clueId).set(answerIdx);
       await broadcastState();
 
-      // Check if correct
       let correct = false;
       if (s.type === 'image_quiz' && s.quiz) {
-        correct = answerIdx === s.quiz.correct;
+        // eslint-disable-next-line eqeqeq
+        correct = answerIdx == s.quiz.correct;
       } else if (s.type === 'forensic_trail') {
         const clue = s.clues.find(c => c.id === clueId);
-        correct = clue && answerIdx === clue.correct;
+        // eslint-disable-next-line eqeqeq
+        correct = clue && answerIdx == clue.correct;
       }
       cb({ ok: true, correct });
     } catch (e) { cb({ ok: false, error: 'Server error' }); }
@@ -354,21 +413,26 @@ io.on('connection', async (socket) => {
       const gs = (await stateRef.once('value')).val();
       if (!gs || gs.phase !== 'BREACH') return cb({ ok: false, error: 'Not in breach window' });
       const s = scByIdx(gs.currentLevel, gs.currentScenarioIdx);
-      if (!s || s.type !== 'decoder') return cb({ ok: false, error: 'Not a decoder round' });
-      const correct = decodedText.trim().toUpperCase() === s.decodedText.toUpperCase();
+      if (!s || (s.type !== 'decoder' && s.type !== 'caesar_cipher')) return cb({ ok: false, error: 'Not a decoder round' });
+      const correct = decodedText.trim().toUpperCase() === (s.decodedText || '').toUpperCase();
       await quizRef.child(key(socket.teamName)).child('decoder').set({ text: decodedText, correct });
       await broadcastState();
       cb({ ok: true, correct });
     } catch (e) { cb({ ok: false, error: 'Server error' }); }
   });
 
-  // ── USE CARD (SABOTAGE_PULSE or BREACH) ──
+  // ── USE CARD (SABOTAGE_PULSE only per handbook) ──
   socket.on('useCard', async ({ cardType, targetName }, cb) => {
     try {
       if (!socket.teamName) return cb({ ok: false, error: 'Not logged in' });
       const gs = (await stateRef.once('value')).val();
-      if (!gs || (gs.phase !== 'SABOTAGE_PULSE' && gs.phase !== 'BREACH')) {
-        return cb({ ok: false, error: 'Cards only available during Sabotage Pulse or Breach' });
+      if (!gs || gs.phase !== 'SABOTAGE_PULSE') {
+        return cb({ ok: false, error: 'Cards only available during the Sabotage Pulse (last 15s)' });
+      }
+
+      // Cannot target yourself
+      if (targetName === socket.teamName) {
+        return cb({ ok: false, error: 'You cannot target yourself' });
       }
 
       const team = (await teamsRef.child(key(socket.teamName)).once('value')).val();
@@ -381,8 +445,8 @@ io.on('connection', async (socket) => {
       const acquired = await acquireLock(lockKey, 5000);
       if (!acquired) return cb({ ok: false, error: 'Target already compromised! Another team got there first.' });
 
-      const targetExists = await teamsRef.child(key(targetName)).once('value');
-      if (!targetExists.exists()) {
+      const targetSnap = await teamsRef.child(key(targetName)).once('value');
+      if (!targetSnap.exists()) {
         await releaseLock(lockKey);
         return cb({ ok: false, error: 'Target team not found' });
       }
@@ -395,11 +459,15 @@ io.on('connection', async (socket) => {
         updates[`game/teams/${key(targetName)}/targeted`] = true;
         updates[`game/teams/${key(socket.teamName)}/cards/doublerisk`] = false;
       }
+
       await db.ref().update(updates);
       await broadcastState();
       await releaseLock(lockKey);
       cb({ ok: true });
-    } catch (e) { await releaseLock(`card_lock:${cardType}:${key(targetName)}`); cb({ ok: false, error: 'Server error' }); }
+    } catch (e) {
+      await releaseLock(`card_lock:${cardType}:${key(targetName)}`);
+      cb({ ok: false, error: 'Server error' });
+    }
   });
 
   // ── ROLLBACK ──
@@ -409,24 +477,24 @@ io.on('connection', async (socket) => {
       const gs = (await stateRef.once('value')).val();
       if (!gs || gs.phase !== 'AFTERMATH') return cb({ ok: false, error: 'Rollback only available in Aftermath' });
 
-      // Check 7-second window
       const elapsed = (Date.now() - (gs.aftermathStart || 0)) / 1000;
       if (elapsed > ROLLBACK_WINDOW) return cb({ ok: false, error: 'Rollback window expired' });
 
       const team = (await teamsRef.child(key(socket.teamName)).once('value')).val();
       if (!team) return cb({ ok: false, error: 'Team not found' });
-      const cards = team.cards || {};
-      if (!cards.rollback) return cb({ ok: false, error: 'Rollback already used' });
+      if (!team.cards || !team.cards.rollback) return cb({ ok: false, error: 'Rollback already used' });
 
       const dec = await decsRef.child(key(socket.teamName)).once('value');
       if (!dec.exists() || dec.val() !== 'deploy') return cb({ ok: false, error: 'Rollback only for wrong Deploy decisions' });
 
       const s = scByIdx(gs.currentLevel, gs.currentScenarioIdx);
-      if (!s || dec.val() === s.answer) return cb({ ok: false, error: 'Decision was correct' });
+      if (!s || dec.val() === s.answer) return cb({ ok: false, error: 'Decision was correct — no rollback needed' });
 
+      // Rollback: change -5 or -8 penalty to -2 (per handbook)
       const oldPenalty = team.targeted ? -8 : -5;
-      const newScore = (team.score || 0) - oldPenalty + (-2);
-      const history = [...(team.history || [])];
+      const latePenalty = (team.history && team.history.length && team.history[team.history.length - 1].pts < oldPenalty) ? -1 : 0;
+      const newScore = (team.score || 0) - (oldPenalty + latePenalty) + (-2);
+      const history = (team.history || []).map(h => clean(h));
       if (history.length) history[history.length - 1].pts = -2;
 
       await teamsRef.child(key(socket.teamName)).update({
@@ -441,57 +509,64 @@ io.on('connection', async (socket) => {
   //  ADMIN ACTIONS
   // ══════════════════════════════════════════════════════
 
-  // ── START ROUND (LOBBY → BREACH → SABOTAGE_PULSE) ──
+  // ── START ROUND ──
   socket.on('startRound', async (cb) => {
     try {
       if (socket.role !== 'admin') return cb({ ok: false, error: 'Unauthorized' });
       const gs = (await stateRef.once('value')).val();
-      if (gs && gs.phase === 'BREACH') return cb({ ok: false, error: 'Round already active' });
+      if (gs && (gs.phase === 'BREACH' || gs.phase === 'BRIEFING' || gs.phase === 'SABOTAGE_PULSE')) {
+        return cb({ ok: false, error: 'Round already active' });
+      }
 
       clearAllTimers();
       await decsRef.set(null);
       await quizRef.set(null);
 
+      const level = gs ? (gs.currentLevel || 1) : 1;
+      const breachDur = getBreachDuration(level);
+      // Sabotage runs during the last 15s of breach (starts when breach has breachDur - 15s elapsed)
+      const sabotageMsIn = Math.max(0, (breachDur - SABOTAGE_DURATION) * 1000);
       const now = Date.now();
 
-      // Phase 1: BRIEFING (5s for teams to read)
+      // Phase 1: BRIEFING — 60 seconds
       await stateRef.update({
         phase: 'BRIEFING',
-        breachStartedAt: now + 5000,
-        sabotageStartedAt: now + 5000 + (BREACH_DURATION * 1000),
-        breachDuration: BREACH_DURATION,
-        sabotageDuration: SABOTAGE_PULSE_DURATION,
+        briefingStartedAt: now,
+        breachDuration: breachDur,
+        revealedAnswer: '',
       });
       await broadcastState();
-      io.emit('phase', { phase: 'BRIEFING', message: 'Incoming transmission…' });
+      io.emit('phase', { phase: 'BRIEFING', message: 'Incoming transmission…', duration: BRIEFING_DURATION });
+      startTicking(BRIEFING_DURATION, 'BRIEFING');
+      console.log(`Round started — BRIEFING (${BRIEFING_DURATION}s)`);
 
-      // Phase 2: BREACH after 5s
+      // Phase 2: BREACH after BRIEFING
       addTimer(async () => {
         const breachNow = Date.now();
         await stateRef.update({ phase: 'BREACH', breachStartedAt: breachNow });
         await broadcastState();
-        io.emit('phase', { phase: 'BREACH', duration: BREACH_DURATION });
-        startTicking(BREACH_DURATION, 'BREACH');
-        console.log('Phase: BREACH');
+        io.emit('phase', { phase: 'BREACH', duration: breachDur });
+        startTicking(breachDur, 'BREACH');
+        console.log(`Phase: BREACH (${breachDur}s)`);
 
-        // Phase 3: SABOTAGE_PULSE after BREACH_DURATION
+        // Phase 3: SABOTAGE_PULSE — last 15s of breach window
         addTimer(async () => {
-          await stateRef.update({ phase: 'SABOTAGE_PULSE', sabotageStartedAt: Date.now() });
+          const sabNow = Date.now();
+          await stateRef.update({ phase: 'SABOTAGE_PULSE', sabotageStartedAt: sabNow });
           await broadcastState();
-          io.emit('phase', { phase: 'SABOTAGE_PULSE', duration: SABOTAGE_PULSE_DURATION });
-          startTicking(SABOTAGE_PULSE_DURATION, 'SABOTAGE_PULSE');
-          console.log('Phase: SABOTAGE_PULSE');
+          io.emit('phase', { phase: 'SABOTAGE_PULSE', duration: SABOTAGE_DURATION });
+          startTicking(SABOTAGE_DURATION, 'SABOTAGE_PULSE');
+          console.log('Phase: SABOTAGE_PULSE (15s)');
 
-          // Phase 4: AFTERMATH after SABOTAGE_PULSE_DURATION
+          // Phase 4: AFTERMATH after sabotage ends
           addTimer(async () => {
             await doRevealAnswer();
-          }, SABOTAGE_PULSE_DURATION * 1000);
+          }, SABOTAGE_DURATION * 1000);
 
-        }, BREACH_DURATION * 1000);
-      }, 5000);
+        }, sabotageMsIn);
+      }, BRIEFING_DURATION * 1000);
 
       cb({ ok: true });
-      console.log('Round started — BRIEFING phase');
     } catch (e) { cb({ ok: false, error: 'Server error' }); }
   });
 
@@ -505,7 +580,7 @@ io.on('connection', async (socket) => {
     } catch (e) { cb({ ok: false, error: 'Server error' }); }
   });
 
-  // ── NEXT ROUND (RECON → LOBBY) ──
+  // ── NEXT ROUND ──
   socket.on('nextRound', async (cb) => {
     try {
       if (socket.role !== 'admin') return cb({ ok: false, error: 'Unauthorized' });
@@ -517,21 +592,30 @@ io.on('connection', async (socket) => {
       const teams = data.teams || {};
       const updates = {};
 
-      // Unfreeze all
+      // Check if this is the last round of Level 4 — apply hoarding penalty
+      const list = byLevel(gs.currentLevel || 1);
+      const isLastL4 = gs.currentLevel === 4 && gs.currentScenarioIdx >= list.length - 1;
+      if (isLastL4) {
+        await applyHoardingPenalty();
+        console.log('Game complete — hoarding penalties applied');
+      }
+
+      // Unfreeze and un-target all teams
       Object.keys(teams).forEach(k => {
         updates[`game/teams/${k}/frozen`] = false;
         updates[`game/teams/${k}/targeted`] = false;
       });
 
-      // Advance scenario
-      const list = byLevel(gs.currentLevel || 1);
-      let lvl = gs.currentLevel || 1, idx = gs.currentScenarioIdx || 0;
+      // Advance scenario/level
+      let lvl = gs.currentLevel || 1;
+      let idx = gs.currentScenarioIdx || 0;
       if (idx < list.length - 1) { idx++; }
-      else { if (lvl < 4) lvl++; idx = 0; }
+      else { if (lvl < 4) { lvl++; idx = 0; } }
 
       updates['game/state/phase'] = 'LOBBY';
       updates['game/state/currentLevel'] = lvl;
       updates['game/state/currentScenarioIdx'] = idx;
+      updates['game/state/revealedAnswer'] = '';
       updates['game/decisions'] = null;
       updates['game/quizAnswers'] = null;
 
@@ -547,7 +631,9 @@ io.on('connection', async (socket) => {
     try {
       if (socket.role !== 'admin') return cb({ ok: false, error: 'Unauthorized' });
       const gs = (await stateRef.once('value')).val();
-      if (gs && gs.phase === 'BREACH') return cb({ ok: false, error: 'Cannot change level mid-round' });
+      if (gs && ['BREACH', 'SABOTAGE_PULSE', 'BRIEFING'].includes(gs.phase)) {
+        return cb({ ok: false, error: 'Cannot change level during active round' });
+      }
       await stateRef.update({ currentLevel: level, currentScenarioIdx: 0 });
       await broadcastState();
       cb({ ok: true });
@@ -559,7 +645,9 @@ io.on('connection', async (socket) => {
     try {
       if (socket.role !== 'admin') return cb({ ok: false, error: 'Unauthorized' });
       const gs = (await stateRef.once('value')).val();
-      if (gs && gs.phase === 'BREACH') return cb({ ok: false, error: 'Cannot change scenario mid-round' });
+      if (gs && ['BREACH', 'SABOTAGE_PULSE', 'BRIEFING'].includes(gs.phase)) {
+        return cb({ ok: false, error: 'Cannot change scenario during active round' });
+      }
       await stateRef.update({ currentScenarioIdx: idx });
       await broadcastState();
       cb({ ok: true });
@@ -576,7 +664,7 @@ io.on('connection', async (socket) => {
       await teamsRef.child(key(name)).set({
         name, pass: password, score: 0,
         cards: { rollback: true, freeze: true, doublerisk: true },
-        frozen: false, targeted: false, history: [], online: false
+        frozen: false, targeted: false, history: [], online: false,
       });
       await broadcastState();
       cb({ ok: true });
@@ -593,7 +681,7 @@ io.on('connection', async (socket) => {
     } catch (e) { cb({ ok: false, error: 'Server error' }); }
   });
 
-  // ── MANUAL SCORE OVERRIDE ──
+  // ── OVERRIDE SCORE ──
   socket.on('overrideScore', async ({ teamName, score }, cb) => {
     try {
       if (socket.role !== 'admin') return cb({ ok: false, error: 'Unauthorized' });
@@ -605,7 +693,7 @@ io.on('connection', async (socket) => {
     } catch (e) { cb({ ok: false, error: 'Server error' }); }
   });
 
-  // ── UNFREEZE TEAM (hardware issue) ──
+  // ── UNFREEZE TEAM ──
   socket.on('unfreezeTeam', async ({ teamName }, cb) => {
     try {
       if (socket.role !== 'admin') return cb({ ok: false, error: 'Unauthorized' });
@@ -620,7 +708,7 @@ io.on('connection', async (socket) => {
     try {
       if (socket.role !== 'admin') return cb({ ok: false, error: 'Unauthorized' });
       clearAllTimers();
-      await stateRef.update({ phase: 'LOBBY' });
+      await stateRef.update({ phase: 'LOBBY', revealedAnswer: '' });
       await decsRef.set(null);
       await quizRef.set(null);
       await broadcastState();
@@ -654,7 +742,7 @@ io.on('connection', async (socket) => {
 
 // ── HEALTH CHECK ──
 app.get('/health', (req, res) => res.json({
-  status: 'ok', uptime: process.uptime(), timestamp: new Date().toISOString()
+  status: 'ok', uptime: process.uptime(), timestamp: new Date().toISOString(),
 }));
 
 // ── START ──
@@ -662,16 +750,13 @@ const PORT = process.env.PORT || 3000;
 server.listen(PORT, async () => {
   console.log(`\n🚀 COR v2 Server on port ${PORT}`);
   try {
-    // Explicitly test Firebase connection before seeding
     await db.ref('.info/connected').once('value');
     console.log('✅ Firebase connected');
     await seedIfEmpty();
     console.log('✅ Firebase ready\n');
   } catch (e) {
     console.error('❌ Firebase error:', e.message);
-    console.error('❌ Check these Railway env vars:');
-    console.error('   FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL,');
-    console.error('   FIREBASE_PRIVATE_KEY, FIREBASE_DATABASE_URL');
+    console.error('   Check: FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY, FIREBASE_DATABASE_URL');
     process.exit(1);
   }
 });

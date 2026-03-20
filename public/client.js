@@ -29,29 +29,58 @@ function tone(freq, type = 'sine', dur = 0.15, vol = 0.3, delay = 0) {
 }
 
 const SFX = {
-  click() { tone(440, 'square', 0.08, 0.15); },
-  deploy() { tone(523, 'sine', 0.1, 0.3); tone(659, 'sine', 0.12, 0.25, 0.1); tone(784, 'sine', 0.15, 0.2, 0.22); },
-  delay() { tone(392, 'sawtooth', 0.1, 0.25); tone(330, 'sawtooth', 0.12, 0.2, 0.12); },
-  briefing() { [0, 0.15, 0.3].forEach((d, i) => tone(300 + i * 100, 'sine', 0.2, 0.2, d)); },
-  breach() { [0, 0.08, 0.16, 0.24, 0.32].forEach((d, i) => tone(220 + i * 60, 'square', 0.1, 0.2, d)); },
-  sabotage() {
-    // Dramatic alarm
-    [0, 0.1, 0.2, 0.3, 0.4, 0.5].forEach(d => tone(880, 'sawtooth', 0.08, 0.4, d));
-    [0.05, 0.15, 0.25, 0.35, 0.45].forEach(d => tone(660, 'sawtooth', 0.06, 0.3, d));
+  click() { tone(440, 'square', 0.06, 0.12); },
+  // Deploy: ascending confident chord
+  deploy() { [0, 0.07, 0.15, 0.25].forEach((d, i) => tone([523, 659, 784, 1047][i], 'sine', 0.18, 0.3, d)); },
+  // Delay: descending warning tones
+  delay() { [0, 0.1, 0.2].forEach((d, i) => tone([440, 330, 220][i], 'sawtooth', 0.15, 0.3, d)); },
+  // Briefing: calm but attentive beep sequence
+  briefing() { [0, 0.2, 0.4, 0.6].forEach((d, i) => tone([400, 500, 400, 600][i], 'sine', 0.15, 0.2, d)); },
+  // Breach: dramatic 5-tone alarm burst — HIGH ENERGY
+  breach() {
+    [0, 0.06, 0.12, 0.18, 0.24, 0.3].forEach((d, i) => tone(180 + i * 80, 'square', 0.12, 0.35, d));
+    [0.35, 0.42, 0.49].forEach((d, i) => tone(800 + i * 100, 'square', 0.08, 0.25, d));
   },
-  aftermath() { tone(880, 'sine', 0.06, 0.4); tone(1100, 'sine', 0.06, 0.35, 0.07); tone(1320, 'sine', 0.08, 0.3, 0.14); },
-  recon() { [523, 659, 784, 1047].forEach((f, i) => tone(f, 'sine', 0.15, 0.3, i * 0.12)); },
-  correct() { [0, 0.1, 0.2].forEach(d => tone(784, 'sine', 0.12, 0.35, d)); },
-  wrong() { tone(150, 'sawtooth', 0.3, 0.4); tone(120, 'sawtooth', 0.25, 0.3, 0.15); },
-  tick() { tone(800, 'square', 0.04, 0.1); },
-  urgentTick() { tone(1200, 'square', 0.05, 0.2); },
-  sabotageTick() { tone(1400, 'sawtooth', 0.06, 0.25); tone(700, 'sawtooth', 0.04, 0.2, 0.05); },
-  freeze() { [0, 0.07, 0.14, 0.21].forEach(d => tone(1200 - d * 800, 'sine', 0.06, 0.2, d)); },
-  rollback() { [0, 0.08, 0.16].forEach(d => tone(440 + d * 300, 'triangle', 0.08, 0.25, d)); },
-  quizCorrect() { tone(880, 'sine', 0.1, 0.4); tone(1100, 'sine', 0.1, 0.35, 0.1); },
-  quizWrong() { tone(220, 'sawtooth', 0.15, 0.3); },
-  decoderUnlock() { [440, 550, 660, 880].forEach((f, i) => tone(f, 'sine', 0.1, 0.3, i * 0.08)); },
-  levelUp() { [523, 659, 784, 1047, 1319].forEach((f, i) => tone(f, 'sine', 0.15, 0.3, i * 0.1)); },
+  // Sabotage: war-room alarm — RED ALERT feeling
+  sabotage() {
+    [0, 0.08, 0.16, 0.24, 0.32, 0.4, 0.48, 0.56].forEach(d => tone(880, 'sawtooth', 0.07, 0.45, d));
+    [0.04, 0.12, 0.20, 0.28, 0.36, 0.44, 0.52].forEach(d => tone(660, 'sawtooth', 0.05, 0.35, d));
+    [0, 0.16, 0.32, 0.48].forEach(d => tone(440, 'sawtooth', 0.04, 0.25, d));
+  },
+  // Aftermath: reveal fanfare
+  aftermath() {
+    [0, 0.08, 0.16, 0.28, 0.42].forEach((d, i) => tone([660, 784, 880, 1047, 1320][i], 'sine', 0.12, 0.35, d));
+  },
+  // Recon: victory ascending arpeggio
+  recon() { [523, 659, 784, 1047, 1319, 1568].forEach((f, i) => tone(f, 'sine', 0.18, 0.35, i * 0.1)); },
+  // Correct: triumphant 3-chord 
+  correct() {
+    [0, 0.1, 0.2, 0.35].forEach((d, i) => tone([784, 880, 1047, 1320][i], 'sine', 0.15, 0.4, d));
+    tone(523, 'sine', 0.3, 0.2, 0);
+  },
+  // Wrong: harsh buzzer
+  wrong() {
+    tone(180, 'sawtooth', 0.25, 0.5);
+    tone(140, 'sawtooth', 0.2, 0.4, 0.1);
+    tone(100, 'sawtooth', 0.15, 0.35, 0.22);
+  },
+  // Timer ticks — escalating urgency
+  tick() { tone(900, 'square', 0.03, 0.08); },
+  urgentTick() { tone(1300, 'square', 0.05, 0.18); tone(1000, 'square', 0.03, 0.12, 0.06); },
+  finalTick() { tone(1600, 'square', 0.06, 0.25); tone(1200, 'square', 0.05, 0.2, 0.04); tone(800, 'square', 0.03, 0.15, 0.08); },
+  sabotageTick() { tone(1500, 'sawtooth', 0.05, 0.22); tone(750, 'sawtooth', 0.04, 0.18, 0.04); },
+  // Card sounds
+  freeze() { [0, 0.06, 0.12, 0.18, 0.24].forEach((d, i) => tone(1400 - i * 200, 'sine', 0.08, 0.25, d)); },
+  doubleRisk() { [0, 0.08, 0.16].forEach((d, i) => tone([440, 550, 880][i], 'sawtooth', 0.1, 0.3, d)); },
+  rollback() { [0, 0.08, 0.16, 0.26].forEach((d, i) => tone([440, 550, 660, 784][i], 'triangle', 0.1, 0.3, d)); },
+  // Quiz
+  quizCorrect() { tone(880, 'sine', 0.12, 0.4); tone(1100, 'sine', 0.12, 0.38, 0.1); tone(1320, 'sine', 0.1, 0.32, 0.22); },
+  quizWrong() { tone(250, 'sawtooth', 0.12, 0.3); tone(200, 'sawtooth', 0.1, 0.25, 0.1); },
+  decoderUnlock() { [440, 550, 660, 880, 1047].forEach((f, i) => tone(f, 'sine', 0.12, 0.32, i * 0.07)); },
+  levelUp() { [523, 659, 784, 880, 1047, 1319].forEach((f, i) => tone(f, 'sine', 0.18, 0.35, i * 0.09)); },
+  // Countdown last 10s
+  countdown10() { tone(1000, 'square', 0.04, 0.15); },
+  countdown5() { tone(1400, 'square', 0.06, 0.2); },
 };
 
 // ═══════════════════════════════════════════════════════
@@ -139,13 +168,26 @@ socket.on('gameState', data => {
   rerender();
 });
 
-socket.on('phase', ({ phase, duration, message }) => {
+socket.on('phase', ({ phase, duration, message, revealedAnswer }) => {
+  if (revealedAnswer) L.revealedAnswer = revealedAnswer;
   showPhaseOverlay(phase, message);
 });
 
 socket.on('timerTick', ({ left, max, phase }) => {
   L.timerLeft = left; L.timerMax = max;
-  updateTimerUI(left, max, phase || L.gameState?.phase);
+  const p = phase || L.gameState?.phase;
+  updateTimerUI(left, max, p);
+  // Play tick sounds based on urgency
+  if (p === 'SABOTAGE_PULSE') {
+    SFX.sabotageTick();
+  } else if (p === 'BREACH') {
+    if (left <= 5) SFX.finalTick();
+    else if (left <= 10) SFX.urgentTick();
+    else if (left % 10 === 0 && left > 0) SFX.tick();
+  } else if (p === 'BRIEFING') {
+    if (left <= 10) SFX.countdown10();
+    if (left <= 5) SFX.countdown5();
+  }
 });
 
 function handlePhaseChange(from, to) {
@@ -158,6 +200,8 @@ function handlePhaseChange(from, to) {
       break;
     case 'BREACH':
       SFX.breach();
+      // Play breach sound again after 0.5s for double impact
+      setTimeout(() => SFX.breach(), 500);
       showPhaseOverlay('BREACH', 'Decision window open — Deploy or Delay?');
       document.body.classList.remove('sabotage-pulse');
       L.quizUnlocked = false;
@@ -724,19 +768,30 @@ function renderResults(team, s) {
   const correctAnswer = L.revealedAnswer || L.gameState.revealedAnswer || '';
   const myDec = L.decisions[key(L.teamName)];
   if (team.frozen) {
-    showBanner('wrong', '❄ You were frozen this round. No points.');
-  } else if (!myDec) {
-    showBanner('wrong', `⏱ No decision — −1 pt.${correctAnswer ? ' Correct: ' + correctAnswer.toUpperCase() : ''}`);
-  } else if (correctAnswer && myDec === correctAnswer) {
-    showBanner('correct', `✓ CORRECT! +6 pts.`);
-    SFX.correct();
-  } else if (correctAnswer) {
-    const pen = team.targeted ? -8 : -5;
-    showBanner('wrong', `✗ WRONG! ${pen} pts. Correct: ${correctAnswer.toUpperCase()}. ${s ? (s.explanation || '') : ''}`);
-    SFX.wrong();
-  } else {
-    // revealedAnswer not yet received — show neutral pending state
+    showBanner('wrong', '❄ You were frozen this round. 0 pts.');
+    return;
+  }
+  if (!correctAnswer) {
     showBanner('wrong', '⏳ Calculating results…');
+    return;
+  }
+  if (!myDec) {
+    // No submission: -5 wrong + -1 late = -6
+    showBanner('wrong', `⏱ No decision submitted — −6 pts. Correct was: ${correctAnswer.toUpperCase()}`);
+    SFX.wrong();
+    return;
+  }
+  const isCorrect = myDec === correctAnswer;
+  if (isCorrect) {
+    // Double Risk success = +10, normal = +6
+    const pts = team.targeted ? 10 : 6;
+    const bonus = team.targeted ? ' ⚡ Double Risk bonus!' : '';
+    showBanner('correct', `✓ CORRECT! +${pts} pts.${bonus}`);
+    SFX.correct();
+  } else {
+    const pen = team.targeted ? -8 : -5;
+    showBanner('wrong', `✗ WRONG — ${pen} pts. Correct: ${correctAnswer.toUpperCase()}. ${s ? (s.explanation || '') : ''}`);
+    SFX.wrong();
   }
   if (s && s.learning) {
     const b = $('result-banner');
@@ -838,8 +893,12 @@ function closeModal() { $('card-modal').classList.remove('open'); pendingCard = 
 function confirmCard() {
   if (!L.selectedTarget) return;
   socket.emit('useCard', { cardType: pendingCard, targetName: L.selectedTarget }, res => {
-    if (res.ok) { if (pendingCard === 'freeze') SFX.freeze(); else SFX.click(); closeModal(); }
-    else alert(res.error);
+    if (res.ok) {
+      if (pendingCard === 'freeze') SFX.freeze();
+      else if (pendingCard === 'doublerisk') SFX.doubleRisk();
+      else SFX.click();
+      closeModal();
+    } else { alert(res.error); }
   });
 }
 
