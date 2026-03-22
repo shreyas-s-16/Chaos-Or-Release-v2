@@ -379,7 +379,8 @@ io.on('connection', async (socket) => {
     try {
       if (!socket.teamName) return cb({ ok: false, error: 'Not logged in' });
       const gs = (await stateRef.once('value')).val();
-      if (!gs || gs.phase !== 'BREACH') return cb({ ok: false, error: 'Not in decision window' });
+      // Allow decisions during both BREACH and SABOTAGE_PULSE (last 15s of breach)
+      if (!gs || (gs.phase !== 'BREACH' && gs.phase !== 'SABOTAGE_PULSE')) return cb({ ok: false, error: 'Not in decision window' });
       const team = (await teamsRef.child(key(socket.teamName)).once('value')).val();
       if (!team) return cb({ ok: false, error: 'Team not found' });
       if (team.frozen) return cb({ ok: false, error: 'You are frozen' });

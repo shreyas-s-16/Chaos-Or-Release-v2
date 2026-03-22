@@ -688,7 +688,15 @@ function doLogin() {
 // ═══════════════════════════════════════════════════════
 function renderTeam() {
   if (L.screen !== 'team') return;
-  const team = myTeam(); if (!team) return;
+  let team = myTeam();
+  // If team not found by key, try matching by name directly (handles special char edge cases)
+  if (!team && L.teamName) {
+    team = Object.values(L.teams).find(t =>
+      t.name === L.teamName ||
+      t.name.toLowerCase() === L.teamName.toLowerCase()
+    ) || null;
+  }
+  if (!team) return;
   const gs = L.gameState || {};
   const phase = gs.phase || 'LOBBY';
   const s = getScenario(gs.currentLevel, gs.currentScenarioIdx);
@@ -842,7 +850,8 @@ function renderTeamScenario(team, s, phase) {
 function renderTextLevel(team, s, phase) {
   if (team.frozen) { $('decision-row').style.display = 'none'; return; }
   $('decision-row').style.display = 'grid';
-  const myDec = L.decisions[key(L.teamName)];
+  const myDec = L.decisions[key(L.teamName)] ||
+    L.decisions[key(L.teamName?.toLowerCase())] || null;
   $('btn-deploy').className = 'btn-decision btn-deploy' + (myDec === 'deploy' ? ' selected' : '');
   $('btn-delay').className = 'btn-decision btn-delay' + (myDec === 'delay' ? ' selected' : '');
   $('btn-deploy').disabled = !!myDec;
@@ -1077,7 +1086,8 @@ function showBanner(type, msg) {
 
 function submitDecision(choice) {
   const team = myTeam(); if (!team || team.frozen) return;
-  const gs = L.gameState; if (!gs || gs.phase !== 'BREACH') return;
+  const gs = L.gameState;
+  if (!gs || (gs.phase !== 'BREACH' && gs.phase !== 'SABOTAGE_PULSE')) return;
   if (L.decisions[key(L.teamName)]) return;
   SFX[choice]();
   socket.emit('submitDecision', { decision: choice }, res => { if (!res.ok) alert(res.error); });
