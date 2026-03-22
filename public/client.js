@@ -84,6 +84,243 @@ const SFX = {
 };
 
 // ═══════════════════════════════════════════════════════
+//  PROJECTOR MUSIC ENGINE — Techno/Electronic background
+//  Only plays when screen === 'projector'
+// ═══════════════════════════════════════════════════════
+let musicCtx = null;
+let musicNodes = [];
+let musicPhase = null;
+let musicScheduler = null;
+let musicStep = 0;
+
+function getMusicCtx() {
+  if (!musicCtx) musicCtx = new (window.AudioContext || window.webkitAudioContext)();
+  return musicCtx;
+}
+
+function stopMusic() {
+  if (musicScheduler) { clearInterval(musicScheduler); musicScheduler = null; }
+  musicNodes.forEach(n => { try { n.stop(); } catch (e) { } });
+  musicNodes = [];
+  musicPhase = null;
+  musicStep = 0;
+}
+
+function musicTone(freq, type, startTime, duration, vol, ctx, dest) {
+  try {
+    const o = ctx.createOscillator();
+    const g = ctx.createGain();
+    o.connect(g); g.connect(dest);
+    o.type = type;
+    o.frequency.setValueAtTime(freq, startTime);
+    g.gain.setValueAtTime(0, startTime);
+    g.gain.linearRampToValueAtTime(vol, startTime + 0.01);
+    g.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+    o.start(startTime);
+    o.stop(startTime + duration + 0.05);
+    musicNodes.push(o);
+  } catch (e) { }
+}
+
+// ── LOBBY MUSIC — Ambient chill, waiting vibe ──
+function playLobbyMusic() {
+  if (L.screen !== 'projector') return;
+  stopMusic();
+  musicPhase = 'LOBBY';
+  const ctx = getMusicCtx();
+  const master = ctx.createGain();
+  master.gain.setValueAtTime(0.3, ctx.currentTime);
+  master.connect(ctx.destination);
+
+  // Slow ambient pad — chord progression Am → F → C → G
+  const chords = [[220, 277, 330], [175, 220, 262], [261, 330, 392], [196, 247, 294]];
+  let beat = 0;
+  musicScheduler = setInterval(() => {
+    if (L.screen !== 'projector' || musicPhase !== 'LOBBY') { stopMusic(); return; }
+    const chord = chords[beat % chords.length];
+    const t = ctx.currentTime;
+    chord.forEach(f => musicTone(f, 'sine', t, 1.8, 0.06, ctx, master));
+    // Soft hi-hat
+    musicTone(8000, 'square', t, 0.04, 0.02, ctx, master);
+    musicTone(8000, 'square', t + 0.5, 0.04, 0.015, ctx, master);
+    beat++;
+  }, 2000);
+}
+
+// ── BRIEFING MUSIC — Tense scanner, mission incoming vibe ──
+function playBriefingMusic() {
+  if (L.screen !== 'projector') return;
+  stopMusic();
+  musicPhase = 'BRIEFING';
+  const ctx = getMusicCtx();
+  const master = ctx.createGain();
+  master.gain.setValueAtTime(0.25, ctx.currentTime);
+  master.connect(ctx.destination);
+
+  let step = 0;
+  const melody = [220, 246, 261, 246, 220, 196, 220, 246];
+  musicScheduler = setInterval(() => {
+    if (L.screen !== 'projector' || musicPhase !== 'BRIEFING') { stopMusic(); return; }
+    const t = ctx.currentTime;
+    // Scanner melody
+    musicTone(melody[step % melody.length], 'sine', t, 0.3, 0.08, ctx, master);
+    // Low drone
+    musicTone(55, 'sawtooth', t, 0.4, 0.04, ctx, master);
+    // Tick
+    musicTone(2000, 'square', t, 0.02, 0.03, ctx, master);
+    step++;
+  }, 500);
+}
+
+// ── BREACH MUSIC — Hard techno, high energy, driving beat ──
+function playBreachMusic() {
+  if (L.screen !== 'projector') return;
+  stopMusic();
+  musicPhase = 'BREACH';
+  const ctx = getMusicCtx();
+  const master = ctx.createGain();
+  master.gain.setValueAtTime(0.4, ctx.currentTime);
+  master.connect(ctx.destination);
+
+  // Techno kick pattern: 4-on-the-floor
+  const kickFreqs = [80, 60, 50, 45];
+  // Bass synth pattern
+  const bassNotes = [55, 55, 73, 55, 55, 82, 55, 73];
+  // Lead melody
+  const leadNotes = [440, 0, 440, 494, 440, 0, 392, 0];
+  let step = 0;
+
+  musicScheduler = setInterval(() => {
+    if (L.screen !== 'projector' || musicPhase !== 'BREACH') { stopMusic(); return; }
+    const t = ctx.currentTime;
+    const bar = step % 8;
+
+    // Kick drum (every beat = every 2 steps of 16th notes at 130bpm)
+    if (bar % 2 === 0) {
+      kickFreqs.forEach((f, i) => musicTone(f, 'sine', t + i * 0.015, 0.15, 0.5, ctx, master));
+    }
+    // Snare on 2 and 4
+    if (bar === 2 || bar === 6) {
+      musicTone(200, 'square', t, 0.08, 0.2, ctx, master);
+      musicTone(400, 'sawtooth', t, 0.06, 0.15, ctx, master);
+    }
+    // Hi-hat 16th notes
+    musicTone(8000, 'square', t, 0.03, 0.04, ctx, master);
+
+    // Bass synth
+    const bass = bassNotes[bar];
+    if (bass) musicTone(bass, 'sawtooth', t, 0.18, 0.12, ctx, master);
+
+    // Lead synth
+    const lead = leadNotes[bar];
+    if (lead) {
+      musicTone(lead, 'square', t, 0.1, 0.08, ctx, master);
+      musicTone(lead * 2, 'sine', t, 0.08, 0.04, ctx, master);
+    }
+
+    step++;
+  }, 115); // ~130 BPM (16th notes)
+}
+
+// ── SABOTAGE MUSIC — Alarm rave, intense, chaotic ──
+function playSabotageMusic() {
+  if (L.screen !== 'projector') return;
+  stopMusic();
+  musicPhase = 'SABOTAGE_PULSE';
+  const ctx = getMusicCtx();
+  const master = ctx.createGain();
+  master.gain.setValueAtTime(0.5, ctx.currentTime);
+  master.connect(ctx.destination);
+
+  let step = 0;
+  const alarmFreqs = [880, 1100, 880, 1100, 660, 880, 660, 880];
+
+  musicScheduler = setInterval(() => {
+    if (L.screen !== 'projector' || musicPhase !== 'SABOTAGE_PULSE') { stopMusic(); return; }
+    const t = ctx.currentTime;
+    const bar = step % 8;
+
+    // FAST kick
+    [80, 60, 50].forEach((f, i) => musicTone(f, 'sine', t + i * 0.01, 0.1, 0.6, ctx, master));
+    // Alarm siren
+    musicTone(alarmFreqs[bar], 'sawtooth', t, 0.12, 0.3, ctx, master);
+    // Rapid hi-hat
+    musicTone(8000, 'square', t, 0.02, 0.06, ctx, master);
+    musicTone(6000, 'square', t + 0.05, 0.02, 0.04, ctx, master);
+    // Low bass stab
+    if (bar % 2 === 0) musicTone(55, 'sawtooth', t, 0.08, 0.2, ctx, master);
+
+    step++;
+  }, 80); // ~180 BPM — frantic
+}
+
+// ── AFTERMATH MUSIC — Reveal fanfare then ambient ──
+function playAftermathMusic() {
+  if (L.screen !== 'projector') return;
+  stopMusic();
+  musicPhase = 'AFTERMATH';
+  const ctx = getMusicCtx();
+  const master = ctx.createGain();
+  master.gain.setValueAtTime(0.35, ctx.currentTime);
+  master.connect(ctx.destination);
+
+  // Triumphant arpeggio then settle into slow pulse
+  const fanfare = [523, 659, 784, 1047, 1319, 1047, 784, 659];
+  let step = 0;
+  musicScheduler = setInterval(() => {
+    if (L.screen !== 'projector' || musicPhase !== 'AFTERMATH') { stopMusic(); return; }
+    const t = ctx.currentTime;
+    if (step < fanfare.length) {
+      musicTone(fanfare[step], 'sine', t, 0.25, 0.15, ctx, master);
+    } else {
+      // Slow ambient pulse after fanfare
+      musicTone(220, 'sine', t, 0.8, 0.05, ctx, master);
+      musicTone(330, 'sine', t, 0.6, 0.04, ctx, master);
+    }
+    step++;
+  }, 200);
+}
+
+// ── RECON MUSIC — Victory leaderboard music ──
+function playReconMusic() {
+  if (L.screen !== 'projector') return;
+  stopMusic();
+  musicPhase = 'RECON';
+  const ctx = getMusicCtx();
+  const master = ctx.createGain();
+  master.gain.setValueAtTime(0.35, ctx.currentTime);
+  master.connect(ctx.destination);
+
+  const melody = [523, 523, 659, 784, 784, 659, 523, 392, 440, 523];
+  let step = 0;
+  musicScheduler = setInterval(() => {
+    if (L.screen !== 'projector' || musicPhase !== 'RECON') { stopMusic(); return; }
+    const t = ctx.currentTime;
+    const note = melody[step % melody.length];
+    musicTone(note, 'sine', t, 0.2, 0.12, ctx, master);
+    musicTone(note / 2, 'triangle', t, 0.18, 0.06, ctx, master);
+    // Soft beat
+    if (step % 4 === 0) {
+      [80, 60].forEach((f, i) => musicTone(f, 'sine', t + i * 0.01, 0.12, 0.25, ctx, master));
+    }
+    step++;
+  }, 300);
+}
+
+function startProjectorMusic(phase) {
+  if (L.screen !== 'projector') return;
+  switch (phase) {
+    case 'LOBBY': playLobbyMusic(); break;
+    case 'BRIEFING': playBriefingMusic(); break;
+    case 'BREACH': playBreachMusic(); break;
+    case 'SABOTAGE_PULSE': playSabotageMusic(); break;
+    case 'AFTERMATH': playAftermathMusic(); break;
+    case 'RECON': playReconMusic(); break;
+    default: stopMusic();
+  }
+}
+
+// ═══════════════════════════════════════════════════════
 //  PARTICLES
 // ═══════════════════════════════════════════════════════
 function initParticles() {
@@ -192,6 +429,8 @@ socket.on('timerTick', ({ left, max, phase }) => {
 
 function handlePhaseChange(from, to) {
   console.log(`Phase: ${from} → ${to}`);
+  // Start projector music for this phase
+  if (L.screen === 'projector') startProjectorMusic(to);
   switch (to) {
     case 'BRIEFING':
       SFX.briefing();
@@ -384,8 +623,14 @@ function setScreen(id) {
 }
 function showLogin() { setScreen('login-screen'); }
 function showTeam() { setScreen('team-screen'); rerender(); }
-function showAdmin() { L.isAdmin = true; setScreen('admin-screen'); rerender(); }
-function showProjector() { setScreen('projector-screen'); rerender(); }
+function showAdmin() { L.isAdmin = true; stopMusic(); setScreen('admin-screen'); rerender(); }
+function showProjector() {
+  setScreen('projector-screen');
+  rerender();
+  // Start music for current phase when projector opens
+  const phase = L.gameState ? L.gameState.phase : 'LOBBY';
+  startProjectorMusic(phase || 'LOBBY');
+}
 function showProjectorFromAdmin() { showProjector(); }
 function showAdminFromProjector() { if (L.isAdmin) showAdmin(); else promptAdmin(); }
 
