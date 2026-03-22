@@ -200,20 +200,22 @@ function handlePhaseChange(from, to) {
       break;
     case 'BREACH':
       SFX.breach();
-      // Play breach sound again after 0.5s for double impact
       setTimeout(() => SFX.breach(), 500);
       showPhaseOverlay('BREACH', 'Decision window open — Deploy or Delay?');
       document.body.classList.remove('sabotage-pulse');
       L.quizUnlocked = false;
       L.quizAnswered = {};
+      startBgAtmosphere('BREACH');
       break;
     case 'SABOTAGE_PULSE':
       SFX.sabotage();
       showPhaseOverlay('SABOTAGE_PULSE', '⚠ SABOTAGE PULSE — Cards unlocked!', 'red');
       document.body.classList.add('sabotage-pulse');
+      startBgAtmosphere('SABOTAGE_PULSE');
       break;
     case 'AFTERMATH':
       SFX.aftermath();
+      stopBgAtmosphere();
       showPhaseOverlay('AFTERMATH', 'Results incoming…', 'amber');
       document.body.classList.remove('sabotage-pulse');
       startRollbackWindow();
@@ -226,6 +228,7 @@ function handlePhaseChange(from, to) {
     case 'LOBBY':
       document.body.classList.remove('sabotage-pulse');
       stopRollbackWindow();
+      stopBgAtmosphere();
       break;
   }
 }
@@ -335,6 +338,16 @@ function startRollbackWindow() {
   const cards = team.cards || {};
   // Only show rollback if: deployed wrong AND rollback card still available
   if (myDec !== 'deploy' || myDec === correctAnswer || cards.rollback === false) return;
+
+  // DRAMATIC ROLLBACK ALERT — can't miss it
+  SFX.rollback();
+  setTimeout(() => SFX.rollback(), 400);
+  setTimeout(() => SFX.rollback(), 800);
+  // Flash the screen red briefly
+  const flash = document.createElement('div');
+  flash.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(229,52,26,0.25);z-index:998;pointer-events:none;animation:rollbackFlash 0.4s ease-out forwards;';
+  document.body.appendChild(flash);
+  setTimeout(() => flash.remove(), 800);
 
   const rollbackBtn = $('rollback-btn');
   if (!rollbackBtn) return;
@@ -1137,8 +1150,67 @@ function renderProjector() {
 // ═══════════════════════════════════════════════════════
 //  BOOT
 // ═══════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════
+//  BACKGROUND MUSIC ENGINE
+// ═══════════════════════════════════════════════════════
+let bgMusicInterval = null;
+function startBgAtmosphere(phase) {
+  stopBgAtmosphere();
+  if (phase === 'BREACH') {
+    // Tense low pulse every 2s
+    bgMusicInterval = setInterval(() => {
+      tone(60, 'sawtooth', 0.4, 0.06);
+      tone(80, 'sawtooth', 0.35, 0.05, 0.05);
+    }, 2000);
+  } else if (phase === 'SABOTAGE_PULSE') {
+    // Rapid urgent pulse
+    bgMusicInterval = setInterval(() => {
+      tone(880, 'sawtooth', 0.06, 0.15);
+      tone(660, 'sawtooth', 0.04, 0.12, 0.1);
+    }, 600);
+  } else if (phase === 'BRIEFING') {
+    // Calm scanning beeps
+    bgMusicInterval = setInterval(() => {
+      tone(400, 'sine', 0.1, 0.05);
+    }, 3000);
+  }
+}
+function stopBgAtmosphere() {
+  if (bgMusicInterval) { clearInterval(bgMusicInterval); bgMusicInterval = null; }
+}
+
+// ═══════════════════════════════════════════════════════
+//  COPY-PASTE DISABLE
+// ═══════════════════════════════════════════════════════
+function disableCopyPaste() {
+  document.addEventListener('copy', e => { e.preventDefault(); return false; });
+  document.addEventListener('cut', e => { e.preventDefault(); return false; });
+  document.addEventListener('paste', e => { e.preventDefault(); return false; });
+  document.addEventListener('contextmenu', e => { e.preventDefault(); return false; });
+  document.addEventListener('selectstart', e => {
+    // Allow selection in input fields only
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return true;
+    e.preventDefault(); return false;
+  });
+  // CSS to prevent selection
+  const style = document.createElement('style');
+  style.textContent = `
+    body { -webkit-user-select: none; -moz-user-select: none; user-select: none; }
+    input, textarea { -webkit-user-select: text; -moz-user-select: text; user-select: text; }
+    @keyframes rollbackFlash { 0%{opacity:1} 100%{opacity:0} }
+    @keyframes rollbackPulse {
+      0%{transform:scale(1);box-shadow:0 0 0 0 rgba(229,52,26,0.7)}
+      50%{transform:scale(1.04);box-shadow:0 0 0 12px rgba(229,52,26,0)}
+      100%{transform:scale(1);box-shadow:0 0 0 0 rgba(229,52,26,0)}
+    }
+    #rollback-btn { animation: rollbackPulse 0.8s ease-in-out infinite !important; border:2px solid #e5341a !important; font-weight:700 !important; }
+  `;
+  document.head.appendChild(style);
+}
+
 function boot() {
   initParticles();
+  disableCopyPaste();
   const overlay = document.getElementById('connecting-overlay');
   socket.on('connect', () => {
     setTimeout(() => {

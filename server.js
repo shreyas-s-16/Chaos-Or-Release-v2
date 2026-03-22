@@ -75,7 +75,7 @@ const PROJECTOR_PASSWORD = process.env.PROJECTOR_PASSWORD || 'projector123';
 // Analysis time per level: L1=45s, L2=60s, L3=90s, L4=180s
 // Sabotage = last 15s of analysis (runs concurrently, not added after)
 // Briefing = 60s
-const BRIEFING_DURATION = 60;
+const BRIEFING_DURATION = 20; // Reduced from 60s — enough to read scenario
 const SABOTAGE_DURATION = 15;
 const ROLLBACK_WINDOW = 7;
 const RECON_DURATION = 15;
@@ -426,7 +426,9 @@ io.on('connection', async (socket) => {
       if (!gs || gs.phase !== 'BREACH') return cb({ ok: false, error: 'Not in breach window' });
       const s = scByIdx(gs.currentLevel, gs.currentScenarioIdx);
       if (!s || (s.type !== 'decoder' && s.type !== 'caesar_cipher')) return cb({ ok: false, error: 'Not a decoder round' });
-      const correct = decodedText.trim().toUpperCase() === (s.decodedText || '').toUpperCase();
+      // Normalize: trim, uppercase, collapse multiple spaces, ignore punctuation differences
+      const normalize = str => str.trim().toUpperCase().replace(/\s+/g, ' ').replace(/[^A-Z0-9 ]/g, '');
+      const correct = normalize(decodedText) === normalize(s.decodedText || '');
       await quizRef.child(key(socket.teamName)).child('decoder').set({ text: decodedText, correct });
       await broadcastState();
       cb({ ok: true, correct });
