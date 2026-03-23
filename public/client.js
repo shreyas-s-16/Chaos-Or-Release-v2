@@ -84,239 +84,263 @@ const SFX = {
 };
 
 // ═══════════════════════════════════════════════════════
-//  PROJECTOR MUSIC ENGINE — Techno/Electronic background
-//  Only plays when screen === 'projector'
+//  PROJECTOR MUSIC ENGINE — Dynamic, phase-aware, ever-changing
+//  Rotates between multiple tracks per phase so it never gets boring
 // ═══════════════════════════════════════════════════════
 let musicCtx = null;
 let musicNodes = [];
 let musicPhase = null;
 let musicScheduler = null;
-let musicStep = 0;
+let musicTrackIndex = 0;  // rotates through track variants
+let musicRotateTimer = null;
 
 function getMusicCtx() {
   if (!musicCtx) musicCtx = new (window.AudioContext || window.webkitAudioContext)();
   return musicCtx;
 }
-
 function stopMusic() {
   if (musicScheduler) { clearInterval(musicScheduler); musicScheduler = null; }
+  if (musicRotateTimer) { clearTimeout(musicRotateTimer); musicRotateTimer = null; }
   musicNodes.forEach(n => { try { n.stop(); } catch (e) { } });
   musicNodes = [];
   musicPhase = null;
-  musicStep = 0;
 }
-
-function musicTone(freq, type, startTime, duration, vol, ctx, dest) {
+function musicTone(freq, type, t, dur, vol, ctx, dest) {
   try {
-    const o = ctx.createOscillator();
-    const g = ctx.createGain();
+    const o = ctx.createOscillator(), g = ctx.createGain();
     o.connect(g); g.connect(dest);
     o.type = type;
-    o.frequency.setValueAtTime(freq, startTime);
-    g.gain.setValueAtTime(0, startTime);
-    g.gain.linearRampToValueAtTime(vol, startTime + 0.01);
-    g.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
-    o.start(startTime);
-    o.stop(startTime + duration + 0.05);
+    o.frequency.setValueAtTime(freq, t);
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(vol, t + 0.01);
+    g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+    o.start(t); o.stop(t + dur + 0.05);
     musicNodes.push(o);
   } catch (e) { }
 }
 
-// ── LOBBY MUSIC — Ambient chill, waiting vibe ──
-function playLobbyMusic() {
-  if (L.screen !== 'projector') return;
-  stopMusic();
-  musicPhase = 'LOBBY';
-  const ctx = getMusicCtx();
-  const master = ctx.createGain();
-  master.gain.setValueAtTime(0.3, ctx.currentTime);
-  master.connect(ctx.destination);
-
-  // Slow ambient pad — chord progression Am → F → C → G
-  const chords = [[220, 277, 330], [175, 220, 262], [261, 330, 392], [196, 247, 294]];
-  let beat = 0;
-  musicScheduler = setInterval(() => {
-    if (L.screen !== 'projector' || musicPhase !== 'LOBBY') { stopMusic(); return; }
-    const chord = chords[beat % chords.length];
+// ── LOBBY TRACKS — 4 rotating ambient vibes ──
+const lobbyTracks = [
+  // Track 0: Deep space ambient
+  (ctx, master, step) => {
     const t = ctx.currentTime;
-    chord.forEach(f => musicTone(f, 'sine', t, 1.8, 0.06, ctx, master));
-    // Soft hi-hat
-    musicTone(8000, 'square', t, 0.04, 0.02, ctx, master);
-    musicTone(8000, 'square', t + 0.5, 0.04, 0.015, ctx, master);
-    beat++;
-  }, 2000);
-}
-
-// ── BRIEFING MUSIC — Tense scanner, mission incoming vibe ──
-function playBriefingMusic() {
-  if (L.screen !== 'projector') return;
-  stopMusic();
-  musicPhase = 'BRIEFING';
-  const ctx = getMusicCtx();
-  const master = ctx.createGain();
-  master.gain.setValueAtTime(0.25, ctx.currentTime);
-  master.connect(ctx.destination);
-
-  let step = 0;
-  const melody = [220, 246, 261, 246, 220, 196, 220, 246];
-  musicScheduler = setInterval(() => {
-    if (L.screen !== 'projector' || musicPhase !== 'BRIEFING') { stopMusic(); return; }
+    const chords = [[110, 138, 165], [98, 123, 147], [130, 164, 196], [116, 146, 174]];
+    const chord = chords[Math.floor(step / 2) % chords.length];
+    chord.forEach(f => musicTone(f, 'sine', t, 2.5, 0.04, ctx, master));
+    if (step % 4 === 0) musicTone(55, 'sine', t, 3, 0.06, ctx, master);
+  },
+  // Track 1: Lo-fi synthwave
+  (ctx, master, step) => {
     const t = ctx.currentTime;
-    // Scanner melody
-    musicTone(melody[step % melody.length], 'sine', t, 0.3, 0.08, ctx, master);
-    // Low drone
-    musicTone(55, 'sawtooth', t, 0.4, 0.04, ctx, master);
-    // Tick
-    musicTone(2000, 'square', t, 0.02, 0.03, ctx, master);
-    step++;
-  }, 500);
-}
-
-// ── BREACH MUSIC — Hard techno, high energy, driving beat ──
-function playBreachMusic() {
-  if (L.screen !== 'projector') return;
-  stopMusic();
-  musicPhase = 'BREACH';
-  const ctx = getMusicCtx();
-  const master = ctx.createGain();
-  master.gain.setValueAtTime(0.4, ctx.currentTime);
-  master.connect(ctx.destination);
-
-  // Techno kick pattern: 4-on-the-floor
-  const kickFreqs = [80, 60, 50, 45];
-  // Bass synth pattern
-  const bassNotes = [55, 55, 73, 55, 55, 82, 55, 73];
-  // Lead melody
-  const leadNotes = [440, 0, 440, 494, 440, 0, 392, 0];
-  let step = 0;
-
-  musicScheduler = setInterval(() => {
-    if (L.screen !== 'projector' || musicPhase !== 'BREACH') { stopMusic(); return; }
+    const bass = [65, 65, 82, 65, 73, 65, 58, 65];
+    const pad = [261, 330, 392, 349, 330, 294, 261, 294];
+    musicTone(bass[step % 8], 'sawtooth', t, 0.3, 0.05, ctx, master);
+    musicTone(pad[step % 8], 'sine', t, 0.8, 0.04, ctx, master);
+    if (step % 8 === 0 || step % 8 === 4) musicTone(8000, 'square', t, 0.03, 0.025, ctx, master);
+  },
+  // Track 2: Cinematic tension build
+  (ctx, master, step) => {
     const t = ctx.currentTime;
-    const bar = step % 8;
+    const drone = [41, 41, 46, 41];
+    musicTone(drone[step % 4], 'sawtooth', t, 1.8, 0.04, ctx, master);
+    musicTone(drone[step % 4] * 2, 'sine', t, 1.5, 0.03, ctx, master);
+    if (step % 6 === 0) musicTone(1200, 'square', t, 0.04, 0.02, ctx, master);
+  },
+  // Track 3: Chill electronic
+  (ctx, master, step) => {
+    const t = ctx.currentTime;
+    const mel = [392, 440, 494, 440, 392, 349, 392, 440];
+    const bass = [98, 98, 110, 98];
+    musicTone(mel[step % 8], 'triangle', t, 0.4, 0.06, ctx, master);
+    musicTone(bass[step % 4], 'sawtooth', t, 0.6, 0.04, ctx, master);
+    if (step % 4 === 0) { musicTone(80, 'sine', t, 0.2, 0.15, ctx, master); }
+    if (step % 4 === 2) { musicTone(200, 'square', t, 0.08, 0.1, ctx, master); }
+  },
+];
 
-    // Kick drum (every beat = every 2 steps of 16th notes at 130bpm)
-    if (bar % 2 === 0) {
-      kickFreqs.forEach((f, i) => musicTone(f, 'sine', t + i * 0.015, 0.15, 0.5, ctx, master));
-    }
-    // Snare on 2 and 4
-    if (bar === 2 || bar === 6) {
-      musicTone(200, 'square', t, 0.08, 0.2, ctx, master);
-      musicTone(400, 'sawtooth', t, 0.06, 0.15, ctx, master);
-    }
-    // Hi-hat 16th notes
+// ── BREACH TRACKS — 6 rotating techno tracks ──
+const breachTracks = [
+  // Track 0: Classic 4-on-floor techno 130bpm
+  (ctx, master, step) => {
+    const t = ctx.currentTime;
+    const bar = step % 16;
+    const bass = [55, 0, 55, 0, 55, 0, 73, 0, 55, 0, 55, 0, 82, 0, 55, 0];
+    const lead = [440, 0, 0, 494, 0, 440, 0, 0, 392, 0, 440, 0, 0, 523, 0, 0];
+    if (bar % 4 === 0) { [80, 60, 50, 45].forEach((f, i) => musicTone(f, 'sine', t + i * 0.01, 0.18, 0.5, ctx, master)); }
+    if (bar === 4 || bar === 12) { musicTone(200, 'square', t, 0.09, 0.22, ctx, master); musicTone(380, 'sawtooth', t, 0.07, 0.16, ctx, master); }
     musicTone(8000, 'square', t, 0.03, 0.04, ctx, master);
-
-    // Bass synth
-    const bass = bassNotes[bar];
-    if (bass) musicTone(bass, 'sawtooth', t, 0.18, 0.12, ctx, master);
-
-    // Lead synth
-    const lead = leadNotes[bar];
-    if (lead) {
-      musicTone(lead, 'square', t, 0.1, 0.08, ctx, master);
-      musicTone(lead * 2, 'sine', t, 0.08, 0.04, ctx, master);
-    }
-
-    step++;
-  }, 115); // ~130 BPM (16th notes)
-}
-
-// ── SABOTAGE MUSIC — Alarm rave, intense, chaotic ──
-function playSabotageMusic() {
-  if (L.screen !== 'projector') return;
-  stopMusic();
-  musicPhase = 'SABOTAGE_PULSE';
-  const ctx = getMusicCtx();
-  const master = ctx.createGain();
-  master.gain.setValueAtTime(0.5, ctx.currentTime);
-  master.connect(ctx.destination);
-
-  let step = 0;
-  const alarmFreqs = [880, 1100, 880, 1100, 660, 880, 660, 880];
-
-  musicScheduler = setInterval(() => {
-    if (L.screen !== 'projector' || musicPhase !== 'SABOTAGE_PULSE') { stopMusic(); return; }
+    if (bar % 2 === 1) musicTone(6000, 'square', t, 0.02, 0.025, ctx, master);
+    if (bass[bar]) musicTone(bass[bar], 'sawtooth', t, 0.2, 0.13, ctx, master);
+    if (lead[bar]) { musicTone(lead[bar], 'square', t, 0.12, 0.09, ctx, master); musicTone(lead[bar] * 2, 'sine', t, 0.1, 0.05, ctx, master); }
+  },
+  // Track 1: Acid techno 140bpm — more aggressive
+  (ctx, master, step) => {
     const t = ctx.currentTime;
     const bar = step % 8;
+    const acid = [55, 58, 55, 52, 55, 62, 55, 49];
+    if (bar % 2 === 0) { [85, 65, 52].forEach((f, i) => musicTone(f, 'sine', t + i * 0.012, 0.16, 0.55, ctx, master)); }
+    if (bar === 2 || bar === 6) { musicTone(180, 'sawtooth', t, 0.07, 0.25, ctx, master); }
+    musicTone(acid[bar], 'sawtooth', t, 0.25, 0.18, ctx, master);
+    musicTone(acid[bar] * 2, 'sawtooth', t, 0.12, 0.08, ctx, master);
+    if (bar % 2 === 0) musicTone(9000, 'square', t, 0.025, 0.045, ctx, master);
+    musicTone(7000, 'square', t + 0.05, 0.02, 0.03, ctx, master);
+  },
+  // Track 2: Driving trance 138bpm
+  (ctx, master, step) => {
+    const t = ctx.currentTime;
+    const bar = step % 16;
+    const mel = [523, 0, 659, 0, 523, 0, 494, 0, 440, 0, 523, 0, 587, 0, 659, 0];
+    if (bar % 4 === 0) { [80, 62, 50].forEach((f, i) => musicTone(f, 'sine', t + i * 0.013, 0.19, 0.48, ctx, master)); }
+    if (bar === 4 || bar === 8 || bar === 12) musicTone(160, 'square', t, 0.08, 0.2, ctx, master);
+    musicTone(8500, 'square', t, 0.025, 0.038, ctx, master);
+    musicTone(110, 'sawtooth', t, 0.15, 0.1, ctx, master);
+    if (mel[bar]) { musicTone(mel[bar], 'sine', t, 0.18, 0.12, ctx, master); musicTone(mel[bar] * 1.5, 'sine', t, 0.15, 0.07, ctx, master); }
+  },
+  // Track 3: Industrial techno — dark and heavy
+  (ctx, master, step) => {
+    const t = ctx.currentTime;
+    const bar = step % 8;
+    const bass = [41, 0, 41, 41, 0, 41, 52, 0];
+    if (bar === 0 || bar === 4) { [90, 65, 48].forEach((f, i) => musicTone(f, 'sine', t + i * 0.015, 0.2, 0.6, ctx, master)); }
+    if (bar === 2 || bar === 6) { musicTone(250, 'sawtooth', t, 0.1, 0.3, ctx, master); musicTone(180, 'sawtooth', t, 0.08, 0.2, ctx, master); }
+    if (bass[bar]) musicTone(bass[bar], 'sawtooth', t, 0.25, 0.2, ctx, master);
+    musicTone(10000, 'square', t, 0.02, 0.055, ctx, master);
+    if (bar % 2 === 1) musicTone(5000, 'square', t, 0.015, 0.03, ctx, master);
+  },
+  // Track 4: Progressive house — melodic techno
+  (ctx, master, step) => {
+    const t = ctx.currentTime;
+    const bar = step % 16;
+    const mel = [392, 392, 440, 392, 349, 392, 440, 494, 523, 494, 440, 392, 349, 330, 349, 392];
+    const bass2 = [98, 0, 98, 0, 110, 0, 98, 0, 73, 0, 98, 0, 87, 0, 98, 0];
+    if (bar % 4 === 0) { [80, 62, 52, 48].forEach((f, i) => musicTone(f, 'sine', t + i * 0.01, 0.17, 0.45, ctx, master)); }
+    if (bar === 4 || bar === 12) musicTone(220, 'sawtooth', t, 0.07, 0.18, ctx, master);
+    musicTone(9000, 'square', t, 0.02, 0.03, ctx, master);
+    if (bass2[bar]) musicTone(bass2[bar], 'sawtooth', t, 0.22, 0.12, ctx, master);
+    if (mel[bar]) { musicTone(mel[bar], 'triangle', t, 0.25, 0.1, ctx, master); musicTone(mel[bar] * 2, 'sine', t, 0.2, 0.05, ctx, master); }
+  },
+  // Track 5: Rave anthem — euphoric peaks
+  (ctx, master, step) => {
+    const t = ctx.currentTime;
+    const bar = step % 16;
+    const anthem = [784, 0, 784, 0, 880, 0, 784, 0, 698, 0, 784, 0, 659, 0, 698, 784];
+    if (bar % 4 === 0) { [80, 60, 50].forEach((f, i) => musicTone(f, 'sine', t + i * 0.011, 0.18, 0.52, ctx, master)); }
+    if (bar === 2 || bar === 6 || bar === 10 || bar === 14) musicTone(190, 'square', t, 0.085, 0.22, ctx, master);
+    musicTone(8000, 'square', t, 0.025, 0.035, ctx, master);
+    musicTone(7500, 'square', t + 0.04, 0.02, 0.025, ctx, master);
+    musicTone(110, 'sawtooth', t, 0.2, 0.1, ctx, master);
+    if (anthem[bar]) { musicTone(anthem[bar], 'sine', t, 0.16, 0.13, ctx, master); musicTone(anthem[bar] * 0.5, 'sine', t, 0.16, 0.08, ctx, master); }
+  },
+];
 
-    // FAST kick
-    [80, 60, 50].forEach((f, i) => musicTone(f, 'sine', t + i * 0.01, 0.1, 0.6, ctx, master));
-    // Alarm siren
-    musicTone(alarmFreqs[bar], 'sawtooth', t, 0.12, 0.3, ctx, master);
-    // Rapid hi-hat
-    musicTone(8000, 'square', t, 0.02, 0.06, ctx, master);
-    musicTone(6000, 'square', t + 0.05, 0.02, 0.04, ctx, master);
-    // Low bass stab
-    if (bar % 2 === 0) musicTone(55, 'sawtooth', t, 0.08, 0.2, ctx, master);
+// ── SABOTAGE TRACKS — 3 alarm rave variants ──
+const sabotageTracks = [
+  // Track 0: Red alert siren
+  (ctx, master, step) => {
+    const t = ctx.currentTime;
+    const bar = step % 8;
+    const siren = [880, 1100, 880, 1100, 660, 880, 660, 1320];
+    [80, 60, 50].forEach((f, i) => musicTone(f, 'sine', t + i * 0.008, 0.1, 0.65, ctx, master));
+    musicTone(siren[bar], 'sawtooth', t, 0.1, 0.35, ctx, master);
+    musicTone(8000, 'square', t, 0.018, 0.07, ctx, master);
+    musicTone(6000, 'square', t + 0.04, 0.015, 0.05, ctx, master);
+    if (bar % 2 === 0) musicTone(55, 'sawtooth', t, 0.07, 0.25, ctx, master);
+  },
+  // Track 1: Panic mode — faster, more chaotic
+  (ctx, master, step) => {
+    const t = ctx.currentTime;
+    const bar = step % 6;
+    const chaos = [1047, 784, 1047, 880, 1047, 659];
+    [85, 65, 52].forEach((f, i) => musicTone(f, 'sine', t + i * 0.006, 0.08, 0.7, ctx, master));
+    musicTone(chaos[bar], 'sawtooth', t, 0.07, 0.4, ctx, master);
+    musicTone(chaos[bar] * 0.5, 'sawtooth', t, 0.06, 0.2, ctx, master);
+    musicTone(9000, 'square', t, 0.015, 0.08, ctx, master);
+    musicTone(7000, 'square', t + 0.03, 0.012, 0.06, ctx, master);
+  },
+  // Track 2: War room alarm — deep pulse
+  (ctx, master, step) => {
+    const t = ctx.currentTime;
+    const bar = step % 4;
+    [90, 68, 54, 46].forEach((f, i) => musicTone(f, 'sine', t + i * 0.009, 0.12, 0.6, ctx, master));
+    const freqs = [1320, 1047, 1320, 880];
+    musicTone(freqs[bar], 'square', t, 0.09, 0.3, ctx, master);
+    musicTone(freqs[bar] * 0.5, 'sawtooth', t, 0.07, 0.22, ctx, master);
+    musicTone(10000, 'square', t, 0.012, 0.09, ctx, master);
+    if (bar % 2 === 0) musicTone(41, 'sawtooth', t, 0.1, 0.3, ctx, master);
+  },
+];
 
-    step++;
-  }, 80); // ~180 BPM — frantic
-}
+// ── AFTERMATH TRACKS — 2 variants ──
+const aftermathTracks = [
+  (ctx, master, step) => {
+    const t = ctx.currentTime;
+    const fan = [523, 659, 784, 1047, 1319, 1047, 784, 659, 523, 392, 440, 523];
+    if (step < fan.length) { musicTone(fan[step], 'sine', t, 0.28, 0.16, ctx, master); musicTone(fan[step] * 0.5, 'sine', t, 0.25, 0.08, ctx, master); }
+    else { musicTone(220, 'sine', t, 1, 0.05, ctx, master); musicTone(330, 'sine', t, 0.9, 0.04, ctx, master); }
+  },
+  (ctx, master, step) => {
+    const t = ctx.currentTime;
+    const rev = [784, 659, 523, 392, 330, 392, 440, 523, 659, 784, 880, 784];
+    if (step < rev.length) { musicTone(rev[step], 'triangle', t, 0.22, 0.14, ctx, master); }
+    else { musicTone(196, 'triangle', t, 1.2, 0.05, ctx, master); musicTone(247, 'triangle', t, 1, 0.04, ctx, master); }
+  },
+];
 
-// ── AFTERMATH MUSIC — Reveal fanfare then ambient ──
-function playAftermathMusic() {
-  if (L.screen !== 'projector') return;
+// ── RECON TRACKS — 2 victory variants ──
+const reconTracks = [
+  (ctx, master, step) => {
+    const t = ctx.currentTime;
+    const mel = [523, 523, 659, 784, 784, 659, 523, 392, 440, 523, 587, 523];
+    const note = mel[step % mel.length];
+    musicTone(note, 'sine', t, 0.22, 0.13, ctx, master);
+    musicTone(note * 0.5, 'triangle', t, 0.2, 0.07, ctx, master);
+    if (step % 4 === 0) { [80, 62].forEach((f, i) => musicTone(f, 'sine', t + i * 0.01, 0.14, 0.28, ctx, master)); }
+  },
+  (ctx, master, step) => {
+    const t = ctx.currentTime;
+    const mel2 = [659, 784, 880, 784, 659, 523, 587, 659, 784, 880, 1047, 880];
+    const note = mel2[step % mel2.length];
+    musicTone(note, 'triangle', t, 0.2, 0.12, ctx, master);
+    musicTone(note * 2, 'sine', t, 0.15, 0.05, ctx, master);
+    if (step % 3 === 0) { [80, 60].forEach((f, i) => musicTone(f, 'sine', t + i * 0.01, 0.12, 0.25, ctx, master)); }
+  },
+];
+
+function runMusicTrack(tracks, phase, bpm) {
   stopMusic();
-  musicPhase = 'AFTERMATH';
+  if (L.screen !== 'projector') return;
+  musicPhase = phase;
   const ctx = getMusicCtx();
   const master = ctx.createGain();
   master.gain.setValueAtTime(0.35, ctx.currentTime);
   master.connect(ctx.destination);
-
-  // Triumphant arpeggio then settle into slow pulse
-  const fanfare = [523, 659, 784, 1047, 1319, 1047, 784, 659];
+  const trackIdx = musicTrackIndex % tracks.length;
   let step = 0;
+  const interval = Math.round(60000 / bpm);
   musicScheduler = setInterval(() => {
-    if (L.screen !== 'projector' || musicPhase !== 'AFTERMATH') { stopMusic(); return; }
-    const t = ctx.currentTime;
-    if (step < fanfare.length) {
-      musicTone(fanfare[step], 'sine', t, 0.25, 0.15, ctx, master);
-    } else {
-      // Slow ambient pulse after fanfare
-      musicTone(220, 'sine', t, 0.8, 0.05, ctx, master);
-      musicTone(330, 'sine', t, 0.6, 0.04, ctx, master);
-    }
+    if (L.screen !== 'projector' || musicPhase !== phase) { stopMusic(); return; }
+    tracks[trackIdx](ctx, master, step);
     step++;
-  }, 200);
-}
-
-// ── RECON MUSIC — Victory leaderboard music ──
-function playReconMusic() {
-  if (L.screen !== 'projector') return;
-  stopMusic();
-  musicPhase = 'RECON';
-  const ctx = getMusicCtx();
-  const master = ctx.createGain();
-  master.gain.setValueAtTime(0.35, ctx.currentTime);
-  master.connect(ctx.destination);
-
-  const melody = [523, 523, 659, 784, 784, 659, 523, 392, 440, 523];
-  let step = 0;
-  musicScheduler = setInterval(() => {
-    if (L.screen !== 'projector' || musicPhase !== 'RECON') { stopMusic(); return; }
-    const t = ctx.currentTime;
-    const note = melody[step % melody.length];
-    musicTone(note, 'sine', t, 0.2, 0.12, ctx, master);
-    musicTone(note / 2, 'triangle', t, 0.18, 0.06, ctx, master);
-    // Soft beat
-    if (step % 4 === 0) {
-      [80, 60].forEach((f, i) => musicTone(f, 'sine', t + i * 0.01, 0.12, 0.25, ctx, master));
+  }, interval);
+  // Auto-rotate to next track after 45s (keeps it fresh)
+  musicRotateTimer = setTimeout(() => {
+    if (musicPhase === phase && L.screen === 'projector') {
+      musicTrackIndex++;
+      console.log(`Music: rotating to track ${musicTrackIndex % tracks.length} for ${phase}`);
+      runMusicTrack(tracks, phase, bpm);
     }
-    step++;
-  }, 300);
+  }, 45000);
 }
 
 function startProjectorMusic(phase) {
   if (L.screen !== 'projector') return;
   switch (phase) {
-    case 'LOBBY': playLobbyMusic(); break;
-    case 'BRIEFING': playBriefingMusic(); break;
-    case 'BREACH': playBreachMusic(); break;
-    case 'SABOTAGE_PULSE': playSabotageMusic(); break;
-    case 'AFTERMATH': playAftermathMusic(); break;
-    case 'RECON': playReconMusic(); break;
-    default: stopMusic();
+    case 'LOBBY': runMusicTrack(lobbyTracks, 'LOBBY', 240); break;
+    case 'BREACH': runMusicTrack(breachTracks, 'BREACH', 520); break;  // 130bpm × 4
+    case 'SABOTAGE_PULSE': runMusicTrack(sabotageTracks, 'SABOTAGE_PULSE', 720); break;  // 180bpm × 4
+    case 'AFTERMATH': runMusicTrack(aftermathTracks, 'AFTERMATH', 300); break;
+    case 'RECON': runMusicTrack(reconTracks, 'RECON', 400); break;
+    default: stopMusic(); break;
   }
 }
 
@@ -758,12 +782,15 @@ function renderCards(team, phase) {
     const avail = c[card.key] !== false;
     if (avail) unused++;
     const canUse = avail && canUseCards && card.key !== 'rollback';
-    return `<div class="card-item ${card.key} ${avail ? '' : 'used'}">
-      <div>
-        <div class="card-name" style="color:${card.color}">${card.name}</div>
-        <div class="card-desc">${avail ? card.desc : '— USED —'}</div>
+    const pulseStyle = canUse ? `box-shadow:0 0 20px ${card.color.replace('var(--blue)', 'rgba(59,130,246,0.5)').replace('var(--red)', 'rgba(229,52,26,0.5)').replace('var(--green)', 'rgba(29,185,84,0.5)')};` : '';
+    return `<div class="card-item ${card.key} ${avail ? '' : 'used'}" style="${pulseStyle}">
+      <div class="card-inner">
+        <div>
+          <div class="card-name" style="color:${card.color}">${card.name}</div>
+          <div class="card-desc">${avail ? card.desc : '— USED —'}</div>
+        </div>
+        ${canUse ? `<button class="btn-use-card" onclick="openCardModal('${card.key}')">USE</button>` : ''}
       </div>
-      ${canUse ? `<button class="btn-use-card" onclick="openCardModal('${card.key}')">USE</button>` : ''}
     </div>`;
   }).join('');
   $('unused-warning').style.display = unused > 0 ? 'block' : 'none';

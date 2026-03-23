@@ -214,23 +214,27 @@
           <div class="decoder-feedback" id="decoder-feedback"></div>
         </div>
 
-        <!-- Decision buttons -->
+        <!-- Decision cards -->
         <div class="decision-row" id="decision-row" style="display:none">
           <button class="btn-decision btn-deploy" id="btn-deploy" onclick="submitDecision('deploy')">
-            <span class="dec-icon">▲</span>
-            <span class="dec-label">DEPLOY</span>
-            <span class="dec-hint">System is ready</span>
+            <div class="card-face" data-pts="+6 PTS">
+              <span class="dec-icon">🚀</span>
+              <span class="dec-label">DEPLOY</span>
+              <span class="dec-hint">System is ready — ship it</span>
+            </div>
           </button>
           <button class="btn-decision btn-delay" id="btn-delay" onclick="submitDecision('delay')">
-            <span class="dec-icon">⏸</span>
-            <span class="dec-label">DELAY</span>
-            <span class="dec-hint">Risks detected</span>
+            <div class="card-face" data-pts="−5 PTS">
+              <span class="dec-icon">⛔</span>
+              <span class="dec-label">DELAY</span>
+              <span class="dec-hint">Risks detected — hold back</span>
+            </div>
           </button>
         </div>
 
-        <!-- Rollback (flashes 7s in Aftermath) -->
+        <!-- Rollback card (flashes 7s in Aftermath) -->
         <button class="btn-rollback" id="rollback-btn" style="display:none" onclick="useRollback()">
-          ⏪ ACTIVATE ROLLBACK — Reduce penalty from −5 to −2 <span id="rollback-timer" class="rollback-timer"></span>
+          ⏪ ROLLBACK — Reduce penalty to −2 pts &nbsp;<span id="rollback-timer" class="rollback-timer"></span>
         </button>
       </div>
 
