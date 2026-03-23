@@ -433,9 +433,7 @@ function handlePhaseChange(from, to) {
   if (L.screen === 'projector') startProjectorMusic(to);
   switch (to) {
     case 'BRIEFING':
-      SFX.briefing();
-      showPhaseOverlay('BRIEFING', 'Incoming transmission…');
-      document.body.classList.remove('sabotage-pulse');
+      // Briefing removed — skip straight to BREACH
       break;
     case 'BREACH':
       SFX.breach();
@@ -1423,11 +1421,6 @@ function startBgAtmosphere(phase) {
       tone(880, 'sawtooth', 0.06, 0.15);
       tone(660, 'sawtooth', 0.04, 0.12, 0.1);
     }, 600);
-  } else if (phase === 'BRIEFING') {
-    // Calm scanning beeps
-    bgMusicInterval = setInterval(() => {
-      tone(400, 'sine', 0.1, 0.05);
-    }, 3000);
   }
 }
 function stopBgAtmosphere() {

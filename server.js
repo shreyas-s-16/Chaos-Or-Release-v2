@@ -71,19 +71,24 @@ async function releaseLock(lockKey) {
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin123';
 const PROJECTOR_PASSWORD = process.env.PROJECTOR_PASSWORD || 'projector123';
 
-// ── PHASE TIMINGS (per handbook) ──
-// Analysis time per level: L1=45s, L2=60s, L3=90s, L4=180s
-// Sabotage = last 15s of analysis (runs concurrently, not added after)
-// Briefing = 60s
-const BRIEFING_DURATION = 20; // Reduced from 60s — enough to read scenario
-const SABOTAGE_DURATION = 15;
+// ── PHASE TIMINGS (per master spec) ──
+// L1: 45s analysis | L2: 60s | L3: 90s | L4: 180s
+// Aftermath: L1=20s, L2=30s, L3=40s, L4=40s
+// Recon: 10s all levels
+// NO BRIEFING WINDOW
+const BRIEFING_DURATION = 0;   // Briefing removed
+const SABOTAGE_DURATION = 15;  // Last 15s of breach
 const ROLLBACK_WINDOW = 7;
-const RECON_DURATION = 15;
+const RECON_DURATION = 10;
 
 const BREACH_DURATION_BY_LEVEL = { 1: 45, 2: 60, 3: 90, 4: 180 };
+const AFTERMATH_DURATION_BY_LEVEL = { 1: 20, 2: 30, 3: 40, 4: 40 };
 
 function getBreachDuration(level) {
   return BREACH_DURATION_BY_LEVEL[level] || 45;
+}
+function getAftermathDuration(level) {
+  return AFTERMATH_DURATION_BY_LEVEL[level] || 20;
 }
 
 // ── HELPERS ──
@@ -132,11 +137,7 @@ async function broadcastState() {
   const gs = data.state || {};
 
   let timerLeft = 0, timerMax = 0, timerPhase = gs.phase;
-  if (gs.phase === 'BRIEFING' && gs.briefingStartedAt) {
-    const elapsed = Math.floor((Date.now() - gs.briefingStartedAt) / 1000);
-    timerLeft = Math.max(0, BRIEFING_DURATION - elapsed);
-    timerMax = BRIEFING_DURATION;
-  } else if (gs.phase === 'BREACH' && gs.breachStartedAt) {
+  if (gs.phase === 'BREACH' && gs.breachStartedAt) {
     const elapsed = Math.floor((Date.now() - gs.breachStartedAt) / 1000);
     timerLeft = Math.max(0, (gs.breachDuration || 45) - elapsed);
     timerMax = gs.breachDuration || 45;
@@ -319,17 +320,20 @@ async function doRevealAnswer() {
   await broadcastState();
   console.log(`Aftermath — answer: ${s.answer}`);
 
-  // Auto-advance to RECON after 20s — guard against double-fire
+  // Auto-advance to RECON using level-specific aftermath duration
+  // L1=20s L2=30s L3=40s L4=40s
+  const aftermathDur = getAftermathDuration(gs.currentLevel) * 1000;
   addTimer(async () => {
-    const snap2 = await stateRef.once('value');
-    const curGs = snap2.val() || {};
-    // Only advance if still in AFTERMATH (prevent double-fire from manual reveal)
-    if (curGs.phase !== 'AFTERMATH') return;
-    await stateRef.update({ phase: 'RECON' });
-    io.emit('phase', { phase: 'RECON', revealedAnswer: curGs.revealedAnswer || '' });
-    await broadcastState();
-    console.log('Phase: RECON');
-  }, 20000);
+    try {
+      const snap2 = await stateRef.once('value');
+      const curGs = snap2.val() || {};
+      if (curGs.phase !== 'AFTERMATH') return;
+      await stateRef.update({ phase: 'RECON' });
+      io.emit('phase', { phase: 'RECON', revealedAnswer: curGs.revealedAnswer || '' });
+      await broadcastState();
+      console.log('Phase: RECON');
+    } catch (e) { console.error('RECON transition error:', e.message); }
+  }, aftermathDur);
 }
 
 // ══════════════════════════════════════════════════════
@@ -561,43 +565,34 @@ io.on('connection', async (socket) => {
       const sabotageMsIn = Math.max(0, (breachDur - SABOTAGE_DURATION) * 1000);
       const now = Date.now();
 
-      // Phase 1: BRIEFING — 60 seconds
+      // NO BRIEFING — go straight to BREACH
+      const breachNow = Date.now();
       await stateRef.update({
-        phase: 'BRIEFING',
-        briefingStartedAt: now,
+        phase: 'BREACH',
+        breachStartedAt: breachNow,
         breachDuration: breachDur,
         revealedAnswer: '',
       });
       await broadcastState();
-      io.emit('phase', { phase: 'BRIEFING', message: 'Incoming transmission…', duration: BRIEFING_DURATION });
-      startTicking(BRIEFING_DURATION, 'BRIEFING');
-      console.log(`Round started — BRIEFING (${BRIEFING_DURATION}s)`);
+      io.emit('phase', { phase: 'BREACH', duration: breachDur });
+      startTicking(breachDur, 'BREACH');
+      console.log(`Phase: BREACH (${breachDur}s)`);
 
-      // Phase 2: BREACH after BRIEFING
+      // SABOTAGE_PULSE — last 15s of breach window
       addTimer(async () => {
-        const breachNow = Date.now();
-        await stateRef.update({ phase: 'BREACH', breachStartedAt: breachNow });
+        const sabNow = Date.now();
+        await stateRef.update({ phase: 'SABOTAGE_PULSE', sabotageStartedAt: sabNow });
         await broadcastState();
-        io.emit('phase', { phase: 'BREACH', duration: breachDur });
-        startTicking(breachDur, 'BREACH');
-        console.log(`Phase: BREACH (${breachDur}s)`);
+        io.emit('phase', { phase: 'SABOTAGE_PULSE', duration: SABOTAGE_DURATION });
+        startTicking(SABOTAGE_DURATION, 'SABOTAGE_PULSE');
+        console.log('Phase: SABOTAGE_PULSE (15s)');
 
-        // Phase 3: SABOTAGE_PULSE — last 15s of breach window
+        // AFTERMATH after sabotage ends
         addTimer(async () => {
-          const sabNow = Date.now();
-          await stateRef.update({ phase: 'SABOTAGE_PULSE', sabotageStartedAt: sabNow });
-          await broadcastState();
-          io.emit('phase', { phase: 'SABOTAGE_PULSE', duration: SABOTAGE_DURATION });
-          startTicking(SABOTAGE_DURATION, 'SABOTAGE_PULSE');
-          console.log('Phase: SABOTAGE_PULSE (15s)');
+          await doRevealAnswer();
+        }, SABOTAGE_DURATION * 1000);
 
-          // Phase 4: AFTERMATH after sabotage ends
-          addTimer(async () => {
-            await doRevealAnswer();
-          }, SABOTAGE_DURATION * 1000);
-
-        }, sabotageMsIn);
-      }, BRIEFING_DURATION * 1000);
+      }, sabotageMsIn);
 
       cb({ ok: true });
     } catch (e) { cb({ ok: false, error: 'Server error' }); }
