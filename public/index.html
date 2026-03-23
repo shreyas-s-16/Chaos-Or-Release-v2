@@ -214,27 +214,77 @@
           <div class="decoder-feedback" id="decoder-feedback"></div>
         </div>
 
-        <!-- Decision cards -->
+        <!-- Decision cards — circuit board style -->
         <div class="decision-row" id="decision-row" style="display:none">
           <button class="btn-decision btn-deploy" id="btn-deploy" onclick="submitDecision('deploy')">
-            <div class="card-face" data-pts="+6 PTS">
+            <div class="card-face">
+              <svg class="circuit-bg" viewBox="0 0 130 190" xmlns="http://www.w3.org/2000/svg">
+                <line x1="20" y1="28" x2="58" y2="28" stroke="#1a6fff" stroke-width="1" />
+                <line x1="58" y1="28" x2="58" y2="48" stroke="#1a6fff" stroke-width="1" />
+                <line x1="110" y1="28" x2="72" y2="28" stroke="#1a6fff" stroke-width="1" />
+                <line x1="72" y1="28" x2="72" y2="44" stroke="#1a6fff" stroke-width="1" />
+                <line x1="15" y1="162" x2="52" y2="162" stroke="#1a6fff" stroke-width="1" />
+                <line x1="52" y1="162" x2="52" y2="146" stroke="#1a6fff" stroke-width="1" />
+                <line x1="115" y1="162" x2="78" y2="162" stroke="#1a6fff" stroke-width="1" />
+                <line x1="78" y1="162" x2="78" y2="146" stroke="#1a6fff" stroke-width="1" />
+                <circle cx="20" cy="28" r="2.5" fill="#1a6fff" />
+                <circle cx="110" cy="28" r="2.5" fill="#1a6fff" opacity="0.7" />
+                <circle cx="15" cy="162" r="2.5" fill="#1a6fff" />
+                <circle cx="115" cy="162" r="2.5" fill="#1a6fff" opacity="0.7" />
+                <line x1="14" y1="95" x2="38" y2="95" stroke="#1a6fff" stroke-width="0.5" />
+                <line x1="92" y1="95" x2="116" y2="95" stroke="#1a6fff" stroke-width="0.5" />
+                <rect x="11" y="58" width="9" height="6" rx="1" fill="none" stroke="#1a6fff" stroke-width="0.8" />
+                <rect x="110" y="58" width="9" height="6" rx="1" fill="none" stroke="#1a6fff" stroke-width="0.8" />
+                <rect x="11" y="126" width="9" height="6" rx="1" fill="none" stroke="#1a6fff" stroke-width="0.8" />
+                <rect x="110" y="126" width="9" height="6" rx="1" fill="none" stroke="#1a6fff" stroke-width="0.8" />
+              </svg>
+              <span class="cn cn-tl" style="color:#4af">01</span>
+              <span class="cn cn-br" style="color:#4af">01</span>
               <span class="dec-icon">🚀</span>
+              <span class="dec-pts">+6</span>
               <span class="dec-label">DEPLOY</span>
-              <span class="dec-hint">System is ready — ship it</span>
+              <span class="dec-hint">System is ready</span>
             </div>
           </button>
           <button class="btn-decision btn-delay" id="btn-delay" onclick="submitDecision('delay')">
-            <div class="card-face" data-pts="−5 PTS">
+            <div class="card-face">
+              <svg class="circuit-bg" viewBox="0 0 130 190" xmlns="http://www.w3.org/2000/svg">
+                <line x1="20" y1="28" x2="58" y2="28" stroke="#00e676" stroke-width="1" />
+                <line x1="58" y1="28" x2="58" y2="48" stroke="#00e676" stroke-width="1" />
+                <line x1="110" y1="28" x2="72" y2="28" stroke="#00e676" stroke-width="1" />
+                <line x1="72" y1="28" x2="72" y2="44" stroke="#00e676" stroke-width="1" />
+                <line x1="15" y1="162" x2="52" y2="162" stroke="#00e676" stroke-width="1" />
+                <line x1="52" y1="162" x2="52" y2="146" stroke="#00e676" stroke-width="1" />
+                <line x1="115" y1="162" x2="78" y2="162" stroke="#00e676" stroke-width="1" />
+                <line x1="78" y1="162" x2="78" y2="146" stroke="#00e676" stroke-width="1" />
+                <circle cx="20" cy="28" r="2.5" fill="#00e676" />
+                <circle cx="110" cy="28" r="2.5" fill="#00e676" opacity="0.7" />
+                <circle cx="15" cy="162" r="2.5" fill="#00e676" />
+                <circle cx="115" cy="162" r="2.5" fill="#00e676" opacity="0.7" />
+                <line x1="14" y1="95" x2="38" y2="95" stroke="#00e676" stroke-width="0.5" />
+                <line x1="92" y1="95" x2="116" y2="95" stroke="#00e676" stroke-width="0.5" />
+                <rect x="11" y="58" width="9" height="6" rx="1" fill="none" stroke="#00e676" stroke-width="0.8" />
+                <rect x="110" y="58" width="9" height="6" rx="1" fill="none" stroke="#00e676" stroke-width="0.8" />
+                <rect x="11" y="126" width="9" height="6" rx="1" fill="none" stroke="#00e676" stroke-width="0.8" />
+                <rect x="110" y="126" width="9" height="6" rx="1" fill="none" stroke="#00e676" stroke-width="0.8" />
+              </svg>
+              <span class="cn cn-tl" style="color:#0f0">02</span>
+              <span class="cn cn-br" style="color:#0f0">02</span>
               <span class="dec-icon">⛔</span>
+              <span class="dec-pts">-5</span>
               <span class="dec-label">DELAY</span>
-              <span class="dec-hint">Risks detected — hold back</span>
+              <span class="dec-hint">Risks detected</span>
             </div>
           </button>
         </div>
 
-        <!-- Rollback card (flashes 7s in Aftermath) -->
+        <!-- Rollback card — purple, pulses urgently -->
         <button class="btn-rollback" id="rollback-btn" style="display:none" onclick="useRollback()">
-          ⏪ ROLLBACK — Reduce penalty to −2 pts &nbsp;<span id="rollback-timer" class="rollback-timer"></span>
+          <div class="rb-inner">
+            <span style="font-size:22px">⏪</span>
+            <span>ROLLBACK — Change penalty to −2 pts</span>
+            <span id="rollback-timer" class="rollback-timer" style="color:#e879f9;font-size:16px"></span>
+          </div>
         </button>
       </div>
 

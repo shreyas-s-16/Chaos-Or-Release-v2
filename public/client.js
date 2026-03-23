@@ -778,15 +778,22 @@ function renderCards(team, phase) {
     { key: 'rollback', name: '⏪ ROLLBACK', desc: 'Reduce penalty to -2', color: 'var(--green)' },
   ];
   let unused = 0;
+  const circuitSvg = {
+    freeze: `<svg viewBox="0 0 40 40" style="position:absolute;inset:0;width:100%;height:100%;opacity:0.2"><line x1="20" y1="4" x2="20" y2="36" stroke="#7dd3fc" stroke-width="1"/><line x1="6" y1="12" x2="34" y2="28" stroke="#7dd3fc" stroke-width="1"/><line x1="34" y1="12" x2="6" y2="28" stroke="#7dd3fc" stroke-width="1"/><circle cx="20" cy="4" r="1.5" fill="#7dd3fc"/><circle cx="20" cy="36" r="1.5" fill="#7dd3fc"/></svg>`,
+    doublerisk: `<svg viewBox="0 0 40 40" style="position:absolute;inset:0;width:100%;height:100%;opacity:0.2"><polyline points="24,4 16,20 22,20 14,36" fill="none" stroke="#f59e0b" stroke-width="1.5" stroke-linejoin="round"/></svg>`,
+    rollback: `<svg viewBox="0 0 40 40" style="position:absolute;inset:0;width:100%;height:100%;opacity:0.2"><path d="M20 8 A12 12 0 1 0 32 20" fill="none" stroke="#a855f7" stroke-width="1.5" stroke-linecap="round"/><polyline points="28,12 32,20 24,21" fill="none" stroke="#a855f7" stroke-width="1.5" stroke-linejoin="round"/></svg>`,
+  };
   $('team-cards-list').innerHTML = cards.map(card => {
     const avail = c[card.key] !== false;
     if (avail) unused++;
     const canUse = avail && canUseCards && card.key !== 'rollback';
-    const pulseStyle = canUse ? `box-shadow:0 0 20px ${card.color.replace('var(--blue)', 'rgba(59,130,246,0.5)').replace('var(--red)', 'rgba(229,52,26,0.5)').replace('var(--green)', 'rgba(29,185,84,0.5)')};` : '';
-    return `<div class="card-item ${card.key} ${avail ? '' : 'used'}" style="${pulseStyle}">
+    const glowStyle = canUse && card.key === 'freeze' ? 'box-shadow:0 0 20px rgba(125,211,252,0.4);'
+      : canUse && card.key === 'doublerisk' ? 'box-shadow:0 0 20px rgba(245,158,11,0.4);' : '';
+    return `<div class="card-item ${card.key} ${avail ? '' : 'used'}" style="${glowStyle}">
+      ${circuitSvg[card.key] || ''}
       <div class="card-inner">
         <div>
-          <div class="card-name" style="color:${card.color}">${card.name}</div>
+          <div class="card-name">${card.name}</div>
           <div class="card-desc">${avail ? card.desc : '— USED —'}</div>
         </div>
         ${canUse ? `<button class="btn-use-card" onclick="openCardModal('${card.key}')">USE</button>` : ''}
