@@ -635,12 +635,23 @@ io.on('connection', async (socket) => {
       const teams = data.teams || {};
       const updates = {};
 
-      // Check if this is the last round of Level 4 — apply hoarding penalty
+      // Check if this is the last round of Level 4 — apply hoarding penalty + show end screen
       const list = byLevel(gs.currentLevel || 1);
       const isLastL4 = gs.currentLevel === 4 && gs.currentScenarioIdx >= list.length - 1;
       if (isLastL4) {
         await applyHoardingPenalty();
         console.log('Game complete — hoarding penalties applied');
+        // Transition to GAME_OVER phase instead of LOBBY
+        updates['game/state/phase'] = 'GAME_OVER';
+        updates['game/state/revealedAnswer'] = '';
+        updates['game/decisions'] = null;
+        updates['game/quizAnswers'] = null;
+        await db.ref().update(updates);
+        await broadcastState();
+        io.emit('phase', { phase: 'GAME_OVER' });
+        cb({ ok: true });
+        console.log('Phase: GAME_OVER');
+        return;
       }
 
       // Un-target all teams, reset frozen (startRound will re-apply frozenNextRound)

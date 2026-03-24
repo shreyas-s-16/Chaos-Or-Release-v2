@@ -862,10 +862,12 @@ a {
 
 .scenario-title {
   font-family: var(--font-display);
-  font-size: 28px;
-  letter-spacing: 1px;
+  font-size: 32px;
+  letter-spacing: 2px;
   margin-bottom: 16px;
   line-height: 1.15;
+  color: #fff;
+  text-shadow: 0 0 20px rgba(0, 255, 200, 0.4);
   animation: text-reveal 0.4s ease both;
 }
 
@@ -882,11 +884,13 @@ a {
 }
 
 .scenario-body {
-  color: rgba(232, 229, 220, 0.75);
-  font-size: 12px;
-  line-height: 1.9;
+  color: rgba(232, 229, 220, 0.95);
+  font-size: 16px;
+  line-height: 1.8;
   white-space: pre-line;
-  font-family: var(--font-mono);
+  font-family: var(--font-ui);
+  font-weight: 500;
+  letter-spacing: 0.3px;
 }
 
 /* Decision buttons */
@@ -2796,11 +2800,12 @@ a {
 }
 
 .forensic-clue-question {
-  font-size: 12px;
+  font-size: 14px;
   color: var(--amber);
   margin-bottom: 8px;
-  font-family: 'Share Tech Mono', monospace;
-  letter-spacing: 1px;
+  font-family: var(--font-ui);
+  font-weight: 600;
+  letter-spacing: 0.5px;
 }
 
 .forensic-options {
@@ -3140,4 +3145,19 @@ body.sabotage-pulse {
   flex-direction: column;
   gap: 12px;
   margin: 14px 0;
+}
+
+/* ═══════════════════ END SCREEN ═══════════════════ */
+@keyframes pulse-red {
+
+  0%,
+  100% {
+    opacity: 1;
+    text-shadow: 0 0 40px rgba(229, 52, 26, 0.6);
+  }
+
+  50% {
+    opacity: 0.75;
+    text-shadow: 0 0 80px rgba(229, 52, 26, 1);
+  }
 }

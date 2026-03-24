@@ -466,6 +466,11 @@ socket.on('gameState', data => {
     }
     handlePhaseChange(prevPhase, L.gameState.phase);
   }
+  // If game is over and we're not already on end screen, go there
+  if (L.gameState.phase === 'GAME_OVER' && L.screen !== 'end') {
+    showEndScreen();
+    return;
+  }
   rerender();
 });
 
@@ -478,7 +483,8 @@ socket.on('timerTick', ({ left, max, phase }) => {
   L.timerLeft = left; L.timerMax = max;
   const p = phase || L.gameState?.phase;
   updateTimerUI(left, max, p);
-  // Play tick sounds based on urgency
+  // Sound effects only on projector screen
+  if (L.screen !== 'projector') return;
   if (p === 'SABOTAGE_PULSE') {
     SFX.sabotageTick();
   } else if (p === 'BREACH') {
@@ -493,15 +499,14 @@ socket.on('timerTick', ({ left, max, phase }) => {
 
 function handlePhaseChange(from, to) {
   console.log(`Phase: ${from} → ${to}`);
-  // Start projector music for this phase
+  // Start projector music for this phase (projector only)
   if (L.screen === 'projector') startProjectorMusic(to);
   switch (to) {
     case 'BRIEFING':
       // Briefing removed — skip straight to BREACH
       break;
     case 'BREACH':
-      SFX.breach();
-      setTimeout(() => SFX.breach(), 500);
+      if (L.screen === 'projector') { SFX.breach(); setTimeout(() => SFX.breach(), 500); }
       showPhaseOverlay('BREACH', 'Decision window open — Deploy or Delay?');
       document.body.classList.remove('sabotage-pulse');
       L.quizUnlocked = false;
@@ -509,22 +514,29 @@ function handlePhaseChange(from, to) {
       startBgAtmosphere('BREACH');
       break;
     case 'SABOTAGE_PULSE':
-      SFX.sabotage();
+      if (L.screen === 'projector') SFX.sabotage();
       showPhaseOverlay('SABOTAGE_PULSE', '⚠ SABOTAGE PULSE — Cards unlocked!', 'red');
       document.body.classList.add('sabotage-pulse');
       startBgAtmosphere('SABOTAGE_PULSE');
       break;
     case 'AFTERMATH':
-      SFX.aftermath();
+      if (L.screen === 'projector') SFX.aftermath();
       stopBgAtmosphere();
       showPhaseOverlay('AFTERMATH', 'Results incoming…', 'amber');
       document.body.classList.remove('sabotage-pulse');
       startRollbackWindow();
       break;
     case 'RECON':
-      SFX.recon();
+      if (L.screen === 'projector') SFX.recon();
       showPhaseOverlay('RECON', 'Leaderboard updating…', 'amber');
       stopRollbackWindow();
+      break;
+    case 'GAME_OVER':
+      stopMusic();
+      stopBgAtmosphere();
+      stopRollbackWindow();
+      document.body.classList.remove('sabotage-pulse');
+      showEndScreen();
       break;
     case 'LOBBY':
       document.body.classList.remove('sabotage-pulse');
@@ -1435,7 +1447,7 @@ function renderProjector() {
     $('proj-answer-reveal').style.display = 'none';
     $('proj-decisions').innerHTML = '';
   } else {
-    $('proj-level-tag').textContent = `LEVEL ${s.level} — ROUND ${s.round}/34 — ${s.levelName.toUpperCase()} — ${s.type.toUpperCase()}`;
+    $('proj-level-tag').textContent = `LEVEL ${s.level} — ROUND ${s.round}/30 — ${s.levelName.toUpperCase()} — ${s.type.toUpperCase()}`;
     $('proj-title').textContent = s.title;
     $('proj-body').textContent = s.body;
 
@@ -1485,14 +1497,14 @@ function renderProjector() {
 let bgMusicInterval = null;
 function startBgAtmosphere(phase) {
   stopBgAtmosphere();
+  // Background atmosphere only plays on the projector screen
+  if (L.screen !== 'projector') return;
   if (phase === 'BREACH') {
-    // Tense low pulse every 2s
     bgMusicInterval = setInterval(() => {
       tone(60, 'sawtooth', 0.4, 0.06);
       tone(80, 'sawtooth', 0.35, 0.05, 0.05);
     }, 2000);
   } else if (phase === 'SABOTAGE_PULSE') {
-    // Rapid urgent pulse
     bgMusicInterval = setInterval(() => {
       tone(880, 'sawtooth', 0.06, 0.15);
       tone(660, 'sawtooth', 0.04, 0.12, 0.1);
@@ -1532,28 +1544,92 @@ function disableCopyPaste() {
   document.head.appendChild(style);
 }
 
-function boot() {
-  initParticles();
-  disableCopyPaste();
-  const overlay = document.getElementById('connecting-overlay');
+// ═══════════════════════════════════════════════════════
+//  END SCREEN
+// ═══════════════════════════════════════════════════════
+function showEndScreen() {
+  // Show end screen for all roles
+  setScreen('end-screen');
+  renderEndScreen();
+}
 
-  function onConnected() {
-    setTimeout(() => {
-      if (overlay) { overlay.classList.add('hidden'); setTimeout(() => { if (overlay) overlay.style.display = 'none'; }, 600); }
-      // Only navigate to login if there is no active session.
-      // If the player was already logged in (session restored from sessionStorage),
-      // their screen state is already correct — don't overwrite it.
-      if (!L.teamName && !L.isAdmin) {
-        setScreen('login-screen');
-      } else {
-        // Restore the correct screen without triggering a navigation side-effect
-        const targetScreen = L.isAdmin ? 'admin-screen' : (L.screen ? L.screen + '-screen' : 'team-screen');
-        setScreen(targetScreen);
-      }
-    }, 800);
+function renderEndScreen() {
+  const teams = Object.values(L.teams).sort((a, b) => (b.score || 0) - (a.score || 0));
+
+  // Podium — top 3
+  const medals = ['🥇', '🥈', '🥉'];
+  const podiumHeights = ['120px', '90px', '70px'];
+  const podiumColors = ['var(--amber)', '#aaa', '#cd7f32'];
+  const podiumEl = $('end-podium');
+  if (podiumEl) {
+    // Reorder for visual podium: 2nd, 1st, 3rd
+    const top3 = [teams[1], teams[0], teams[2]].filter(Boolean);
+    const top3Heights = [podiumHeights[1], podiumHeights[0], podiumHeights[2]];
+    const top3Colors = [podiumColors[1], podiumColors[0], podiumColors[2]];
+    const top3Medals = [medals[1], medals[0], medals[2]];
+    podiumEl.innerHTML = top3.map((t, i) => `
+      <div style="display:flex;flex-direction:column;align-items:center;gap:8px;">
+        <div style="font-size:28px;">${top3Medals[i]}</div>
+        <div style="font-family:var(--font-mono);font-size:13px;color:${top3Colors[i]};font-weight:700;text-align:center;max-width:100px;">${t.name}</div>
+        <div style="font-family:var(--font-mono);font-size:18px;color:${top3Colors[i]};font-weight:700;">${(t.score || 0) >= 0 ? '+' : ''}${t.score || 0}</div>
+        <div style="width:80px;height:${top3Heights[i]};background:${top3Colors[i]};opacity:0.3;border-radius:4px 4px 0 0;"></div>
+      </div>`).join('');
   }
 
-  socket.on('connect', onConnected);
-  if (socket.connected) onConnected();
+  // Full leaderboard
+  const lbEl = $('end-leaderboard');
+  if (lbEl) {
+    lbEl.innerHTML = teams.map((t, i) => {
+      const hoardingPenalty = (t.history || []).find(h => h.decision === 'hoarding');
+      const penaltyNote = hoardingPenalty ? ` <span style="color:var(--red);font-size:10px">(${hoardingPenalty.pts} card penalty)</span>` : '';
+      return `<div style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:var(--surface);border:0.5px solid var(--border-hi);border-radius:4px;">
+        <div style="font-family:var(--font-mono);font-size:18px;color:var(--muted);width:28px;text-align:center;">${i + 1}</div>
+        <div style="flex:1;">
+          <div style="font-family:var(--font-mono);font-size:14px;color:var(--fg);">${t.name}${penaltyNote}</div>
+          <div style="font-size:10px;color:var(--dim);">${t.online ? '● online' : '○ offline'}</div>
+        </div>
+        <div style="font-family:var(--font-mono);font-size:20px;font-weight:700;color:${(t.score || 0) >= 0 ? 'var(--green)' : 'var(--red)'};">
+          ${(t.score || 0) >= 0 ? '+' : ''}${t.score || 0}
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  // Show reset button for admin
+  const adminBtns = $('end-admin-btns');
+  if (adminBtns) adminBtns.style.display = L.isAdmin ? 'block' : 'none';
 }
+
+function confirmReset() {
+  if (!confirm('Reset the entire game? This cannot be undone.')) return;
+  socket.emit('resetGame', res => {
+    if (res.ok) { clearSession(); location.reload(); }
+    else alert(res.error);
+  });
+}
+
+
+initParticles();
+disableCopyPaste();
+const overlay = document.getElementById('connecting-overlay');
+
+function onConnected() {
+  setTimeout(() => {
+    if (overlay) { overlay.classList.add('hidden'); setTimeout(() => { if (overlay) overlay.style.display = 'none'; }, 600); }
+    // Only navigate to login if there is no active session.
+    // If the player was already logged in (session restored from sessionStorage),
+    // their screen state is already correct — don't overwrite it.
+    if (!L.teamName && !L.isAdmin) {
+      setScreen('login-screen');
+    } else {
+      // Restore the correct screen without triggering a navigation side-effect
+      const targetScreen = L.isAdmin ? 'admin-screen' : (L.screen ? L.screen + '-screen' : 'team-screen');
+      setScreen(targetScreen);
+    }
+  }, 800);
+}
+
+socket.on('connect', onConnected);
+if (socket.connected) onConnected();
+
 document.addEventListener('DOMContentLoaded', boot);
