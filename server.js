@@ -343,6 +343,21 @@ io.on('connection', async (socket) => {
   console.log(`Client connected: ${socket.id}`);
   broadcastState();
 
+  // ── RECONNECT (restore online status after socket reconnect / page reload) ──
+  socket.on('reconnectTeam', async ({ name }, cb) => {
+    try {
+      const snap = await teamsRef.child(key(name)).once('value');
+      if (!snap.exists()) return cb({ ok: false, error: 'Team not found' });
+      const team = snap.val();
+      // Re-attach the socket to this team and mark online
+      socket.teamName = team.name;
+      socket.role = 'team';
+      await teamsRef.child(key(name)).update({ online: true });
+      await broadcastState();
+      cb({ ok: true, name: team.name });
+    } catch (e) { cb({ ok: false, error: 'Server error' }); }
+  });
+
   // ── LOGIN ──
   socket.on('login', async ({ name, pass }, cb) => {
     try {

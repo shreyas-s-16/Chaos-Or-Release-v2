@@ -375,8 +375,16 @@ function initParticles() {
 // ═══════════════════════════════════════════════════════
 //  LOCAL STATE
 // ═══════════════════════════════════════════════════════
+// Restore session from sessionStorage so page refreshes / socket reconnects
+// don't silently log the player out mid-game.
+const _savedSession = (() => {
+  try { return JSON.parse(sessionStorage.getItem('cor_session') || 'null'); } catch { return null; }
+})();
+
 let L = {
-  screen: 'login', teamName: null, isAdmin: false,
+  screen: _savedSession ? _savedSession.screen : 'login',
+  teamName: _savedSession ? _savedSession.teamName : null,
+  isAdmin: _savedSession ? !!_savedSession.isAdmin : false,
   gameState: null, teams: {}, decisions: {}, quizAnswers: {},
   timerLeft: 0, timerMax: 60, timerInterval: null,
   prevPhase: null,
@@ -388,10 +396,27 @@ let L = {
   rollbackInterval: null,
 };
 
+/** Persist login state so socket reconnects don't wipe the session. */
+function saveSession() {
+  try {
+    sessionStorage.setItem('cor_session', JSON.stringify({
+      screen: L.screen,
+      teamName: L.teamName,
+      isAdmin: L.isAdmin,
+    }));
+  } catch { /* ignore quota errors */ }
+}
+/** Clear saved session on explicit logout. */
+function clearSession() {
+  try { sessionStorage.removeItem('cor_session'); } catch { /* ignore */ }
+}
+
 const $ = id => document.getElementById(id);
 const key = n => String(n).replace(/[^a-zA-Z0-9_]/g, '_');
 const onlineTeams = () => Object.values(L.teams).filter(t => t.online).sort((a, b) => a.name.localeCompare(b.name));
-const leaderboard = () => Object.values(L.teams).filter(t => t.online).sort((a, b) => (b.score || 0) - (a.score || 0));
+// Show ALL teams in leaderboard regardless of online status — online state is ephemeral
+// and should not hide a team's score from rankings.
+const leaderboard = () => Object.values(L.teams).sort((a, b) => (b.score || 0) - (a.score || 0));
 const allTeams = () => Object.values(L.teams).sort((a, b) => a.name.localeCompare(b.name));
 const myTeam = () => L.teams[key(L.teamName)] || null;
 const getScenario = (level, idx) => SCENARIOS.filter(s => s.level === level)[idx] || null;
@@ -399,7 +424,24 @@ const getScenario = (level, idx) => SCENARIOS.filter(s => s.level === level)[idx
 // ═══════════════════════════════════════════════════════
 //  SOCKET EVENTS
 // ═══════════════════════════════════════════════════════
-socket.on('connect', () => { setConnIndicators(true); });
+// ═══════════════════════════════════════════════════════
+//  SOCKET EVENTS
+// ═══════════════════════════════════════════════════════
+socket.on('connect', () => {
+  setConnIndicators(true);
+  // If we have a saved team session, re-mark ourselves online on the server
+  // so the online indicator is accurate after a reconnect / page reload.
+  if (L.teamName) {
+    socket.emit('reconnectTeam', { name: L.teamName }, (res) => {
+      if (!res || !res.ok) {
+        // Session no longer valid — clear it and go to login
+        clearSession();
+        L.teamName = null; L.isAdmin = false;
+        setScreen('login-screen');
+      }
+    });
+  }
+});
 socket.on('disconnect', () => { setConnIndicators(false); });
 
 socket.on('gameState', data => {
@@ -639,6 +681,7 @@ function stopRollbackWindow() {
 //  SCREEN MANAGEMENT
 // ═══════════════════════════════════════════════════════
 function setScreen(id) {
+  saveSession();
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   $(id).classList.add('active');
   L.screen = id.replace('-screen', '');
@@ -667,6 +710,7 @@ function rerender() {
 function logout() {
   socket.emit('logout');
   L.teamName = null; L.isAdmin = false;
+  clearSession();
   document.body.classList.remove('sabotage-pulse');
   showLogin();
 }
@@ -1494,17 +1538,24 @@ function boot() {
   initParticles();
   disableCopyPaste();
   const overlay = document.getElementById('connecting-overlay');
-  socket.on('connect', () => {
+
+  function onConnected() {
     setTimeout(() => {
       if (overlay) { overlay.classList.add('hidden'); setTimeout(() => { if (overlay) overlay.style.display = 'none'; }, 600); }
-      setScreen('login-screen');
-    }, 800);
-  });
-  if (socket.connected) {
-    setTimeout(() => {
-      if (overlay) { overlay.classList.add('hidden'); setTimeout(() => { if (overlay) overlay.style.display = 'none'; }, 600); }
-      setScreen('login-screen');
+      // Only navigate to login if there is no active session.
+      // If the player was already logged in (session restored from sessionStorage),
+      // their screen state is already correct — don't overwrite it.
+      if (!L.teamName && !L.isAdmin) {
+        setScreen('login-screen');
+      } else {
+        // Restore the correct screen without triggering a navigation side-effect
+        const targetScreen = L.isAdmin ? 'admin-screen' : (L.screen ? L.screen + '-screen' : 'team-screen');
+        setScreen(targetScreen);
+      }
     }, 800);
   }
+
+  socket.on('connect', onConnected);
+  if (socket.connected) onConnected();
 }
 document.addEventListener('DOMContentLoaded', boot);
