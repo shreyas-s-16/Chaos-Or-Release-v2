@@ -414,9 +414,7 @@ function clearSession() {
 const $ = id => document.getElementById(id);
 const key = n => String(n).replace(/[^a-zA-Z0-9_]/g, '_');
 const onlineTeams = () => Object.values(L.teams).filter(t => t.online).sort((a, b) => a.name.localeCompare(b.name));
-// Show ALL teams in leaderboard regardless of online status — online state is ephemeral
-// and should not hide a team's score from rankings.
-const leaderboard = () => Object.values(L.teams).sort((a, b) => (b.score || 0) - (a.score || 0));
+const leaderboard = () => Object.values(L.teams).filter(t => t.online).sort((a, b) => (b.score || 0) - (a.score || 0));
 const allTeams = () => Object.values(L.teams).sort((a, b) => a.name.localeCompare(b.name));
 const myTeam = () => L.teams[key(L.teamName)] || null;
 const getScenario = (level, idx) => SCENARIOS.filter(s => s.level === level)[idx] || null;
