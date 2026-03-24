@@ -1,52 +1,459 @@
-// Client-side scenarios — answers NOT included (server-side only)
+// ═══════════════════════════════════════════════════════
+//  CHAOS OR RELEASE — SERVER-SIDE SCENARIOS
+//  FlowPay Master Handbook Edition · 30 Rounds
+//  Contains answer: fields — NEVER expose to client
+// ═══════════════════════════════════════════════════════
+
 const SCENARIOS = [
-  // LEVEL 1 — The Deployment Trenches
-  { level: 1, answer: 'delay', round: 1, levelName: 'The Deployment Trenches', type: 'text', title: 'Q1 — The Last-Minute Checkout Bug', body: 'A checkout bug has been found 10 minutes before go-live.\n\n→ Affects 2% of users with 10+ items in cart\n→ Fix takes 1 hour\n→ The sale starts in 2 hours\n→ All other functionality is working perfectly\n\nDeploy or Delay?', explanation: 'DELAY — You have a 2-hour buffer. Fixing a critical checkout bug before your biggest sale is worth the 1-hour delay.' },
-  { level: 1, answer: 'delay', round: 2, levelName: 'The Deployment Trenches', type: 'text', title: 'Q2 — The Old OS Login Crash', body: 'The app crashes on login for 4% of users running old OS versions.\n\n→ 4% of 2,000,000 users = 80,000 users locked out\n→ No workaround available\n→ Fix requires 6 hours of QA\n→ Core app works fine for the other 96%\n\nDeploy or Delay?', explanation: 'DELAY — 80,000 users locked out is a P0 critical failure. You cannot release a broken login.' },
-  { level: 1, answer: 'deploy', round: 3, levelName: 'The Deployment Trenches', type: 'text', title: 'Q3 — The Rate Limiter Misconfiguration', body: 'The API rate limiter is set to 100 req/min instead of the intended 1000 req/min.\n\n→ Maximum real-world usage is only 80 req/min\n→ No user will ever hit the limit\n→ Fix requires a full redeploy\n→ Zero user impact at current traffic levels\n\nDeploy or Delay?', explanation: 'DEPLOY — Zero user impact. 80 req/min is less than the 100 limit. Ship now, fix next cycle.' },
-  { level: 1, answer: 'deploy', round: 4, levelName: 'The Deployment Trenches', type: 'text', title: 'Q4 — The API Documentation Typo', body: 'A minor typo has been found in the API documentation.\n\n→ "recieve" instead of "receive" in one endpoint description\n→ All underlying API logic is 100% correct\n→ No functional impact whatsoever\n→ Developers can still integrate perfectly\n\nDeploy or Delay?', explanation: "DEPLOY — Typos in docs are not release blockers. Don't stall value for a spelling error." },
-  { level: 1, answer: 'deploy', round: 5, levelName: 'The Deployment Trenches', type: 'text', title: 'Q5 — The Dev Environment Memory Warning', body: 'High memory usage (90%) detected during testing.\n\n→ Only occurs in the development environment\n→ Production environment metrics are completely stable\n→ Production-parity tests have all passed\n→ Likely caused by dev tooling overhead\n\nDeploy or Delay?', explanation: "DEPLOY — Dev environment oddities shouldn't stop a production release if prod-parity tests passed." },
-  { level: 1, answer: 'delay', round: 6, levelName: 'The Deployment Trenches', type: 'text', title: 'Q6 — The Security Patch', body: 'A security patch is available for a medium-risk vulnerability.\n\n→ CVSS score: 5.4 (Medium risk)\n→ Patching and verification takes 2 hours\n→ Release is scheduled for right now\n→ Vulnerability is in a public-facing endpoint\n\nDeploy or Delay?', explanation: 'DELAY — Security takes precedence. A medium-risk in a public release is a liability.' },
-  { level: 1, answer: 'deploy', round: 7, levelName: 'The Deployment Trenches', type: 'text', title: 'Q7 — The IE11 Visual Glitch', body: 'Frontend colors appear slightly off-brand on Internet Explorer 11.\n\n→ Only 0.5% of total traffic uses IE11\n→ All functionality works correctly on IE11\n→ Chrome, Safari, Firefox, Edge: all perfect\n→ Pure cosmetic issue — no UX or checkout impact\n\nDeploy or Delay?', explanation: 'DEPLOY — IE11 glitches on 0.5% of users are not worth delaying for the other 99.5%.' },
-  { level: 1, answer: 'delay', round: 8, levelName: 'The Deployment Trenches', type: 'text', title: 'Q8 — The Failed Migration Script', body: 'A database migration script failed during staging deployment.\n\n→ Devs say "it\'s fine, we\'ll run it manually in production"\n→ Script failed with a foreign key constraint error\n→ Manual execution has not been tested or documented\n→ Production database has live customer data\n\nDeploy or Delay?', explanation: "DELAY — Never 'run it manually' in production if it failed in staging. Fix the automation." },
-  { level: 1, answer: 'deploy', round: 9, levelName: 'The Deployment Trenches', type: 'text', title: 'Q9 — The Broken Analytics', body: 'The analytics tool has stopped tracking button click events.\n\n→ Core application functionality is completely perfect\n→ Checkout, payments, auth — all working 100%\n→ Only click-tracking events are missing\n→ Revenue and UX are completely unaffected\n\nDeploy or Delay?', explanation: "DEPLOY — Analytics are secondary. Don't stop the release; fix tracking later." },
-  { level: 1, answer: 'delay', round: 10, levelName: 'The Deployment Trenches', type: 'text', title: 'Q10 — The Slow Password Reset', body: 'Password reset emails are taking 5 minutes to arrive instead of 10 seconds.\n\n→ Users waiting 5+ minutes to reset passwords\n→ Many users repeatedly clicking "Resend" creating a backlog\n→ Could lock users out of their accounts\n→ Email queue growing exponentially\n\nDeploy or Delay?', explanation: 'DELAY — Users will spam the reset button, causing a backlog and frustration. Fix email service first.' },
-  { level: 1, answer: 'deploy', round: 11, levelName: 'The Deployment Trenches', type: 'text', title: 'Q11 — The Dark Mode OLED Flicker', body: 'The new "Dark Mode" feature has a flickering bug on certain OLED screens.\n\n→ Only affects some OLED screen models\n→ Regular LCD screens: works perfectly\n→ Flickering is visual only — no data loss\n→ Dark Mode is a "nice-to-have" feature\n\nDeploy or Delay?', explanation: "DEPLOY — Dark Mode is a nice-to-have. Users can disable it or wait for a hotfix. Not a blocker." },
-  { level: 1, answer: 'delay', round: 12, levelName: 'The Deployment Trenches', type: 'text', title: 'Q12 — The Payment Gateway 500 Errors', body: 'The third-party payment gateway is having intermittent 500 errors globally.\n\n→ Provider-side infrastructure issue\n→ 15-20% of payment attempts are failing\n→ Provider status page shows "Investigating"\n→ Your release includes payment feature updates\n\nDeploy or Delay?', explanation: 'DELAY — If payments fail, your release is considered a failure. Wait for provider stability.' },
-  { level: 1, answer: 'delay', round: 13, levelName: 'The Deployment Trenches', type: 'text', title: 'Q13 — The Log Space Bomb', body: 'Application logs are filling up disk space 5x faster than normal.\n\n→ Growing at 10GB/hour\n→ Total disk space: 50GB\n→ Core app performance: currently fast\n→ If disk fills: total system crash\n\nDeploy or Delay?', explanation: 'DELAY — Total system crash (Disk Full) within hours. Fix log verbosity before deploying anything.' },
-  { level: 1, answer: 'deploy', round: 14, levelName: 'The Deployment Trenches', type: 'text', title: 'Q14 — The Deleted Test Database', body: 'A developer accidentally deleted a "test_db" database during cleanup.\n\n→ Production database: completely unaffected\n→ All customer data: safe and intact\n→ Test database only had dummy/seed data\n→ No CI/CD pipelines depend on this test DB\n\nDeploy or Delay?', explanation: "DEPLOY — Internal dev accidents shouldn't stop the customer release pipeline. Production is unaffected." },
 
-  // LEVEL 2 — The Architect's Anatomy
-  { level: 2, answer: 'delay', round: 1, levelName: "The Architect's Anatomy", type: 'image_quiz', title: "Round 1: The First Request", body: "Traffic is leaving the user's laptop but is being blocked before it reaches the Web Server.\n\nThe 'Safety First' update is blocking ALL incoming traffic.\n\nIdentify the missing 'Gatekeeper' component represented by the '?'.", imageUrl: '/images/l2-1-firewall.svg', quiz: { question: "What is the missing 'Gatekeeper' component represented by the '?'?", options: ['A — Keyboard', 'B — Firewall / Router', 'C — Hard Drive', 'D — RAM'], correct: 1 }, explanation: "DELAY — Never disable a firewall entirely in production. Write a specific Allow rule for Port 80." },
-  { level: 2, answer: 'deploy', round: 2, levelName: "The Architect's Anatomy", type: 'image_quiz', title: "Round 2: The Memory Wall", body: "Look at the Telemetry Graph. The CPU is completely normal and stable.\n\nBut the system is crashing every 4 hours.\n\nIdentify the software phenomenon you are witnessing.", imageUrl: '/images/l2-2-memoryleak.svg', quiz: { question: 'What software phenomenon are you witnessing in this telemetry graph?', options: ['A — Infinite Loop (CPU Spike)', 'B — Memory Leak', 'C — Disk Fragmentation', 'D — Power Surge'], correct: 1 }, explanation: "DEPLOY — Keep the service Up while investigating. Deploy auto-restart every 2 hours as temporary mitigation." },
-  { level: 2, answer: 'delay', round: 3, levelName: "The Architect's Anatomy", type: 'image_quiz', title: "Round 3: The Protocol Mismatch", body: "Users are trying to connect via HTTPS (Secure), but packets are being dropped at the Transport Layer.\n\nThe Transport Layer is configured to allow only 'Unreliable/Connectionless' traffic.\n\nIdentify what protocol is currently allowed.", imageUrl: '/images/l2-3-protocol.svg', quiz: { question: 'What protocol is currently allowed at the Transport Layer (causing HTTPS to drop)?', options: ['A — TCP', 'B — UDP', 'C — FTP', 'D — SSH'], correct: 1 }, explanation: "DELAY — Security over Availability. Never route users to unencrypted HTTP. Configure TCP/SSL properly." },
-  { level: 2, answer: 'deploy', round: 4, levelName: "The Architect's Anatomy", type: 'image_quiz', title: "Round 4: The 502 Ghost", body: "The Load Balancer is throwing a 502 Bad Gateway error for 33% of your users.\n\nAnalyze the load balancer diagram carefully.\n\nIdentify the root cause of the errors.", imageUrl: '/images/l2-4-loadbalancer.svg', quiz: { question: 'What is the root cause of the 502 Bad Gateway errors?', options: ['A — The Load Balancer is overloaded', "B — Server C is 'Dead' but the Load Balancer is still sending traffic to it", 'C — The Database is full', "D — The User's internet is slow"], correct: 1 }, explanation: "DEPLOY — Drain Server C from the Load Balancer immediately. Stop 502 errors now, investigate after." },
-  { level: 2, answer: 'deploy', round: 5, levelName: "The Architect's Anatomy", type: 'image_quiz', title: "Round 5: The Database Deadlock", body: "The database has completely stopped processing all writes.\n\nAnalyze the circular dependency diagram.\n\nIdentify the database state shown.", imageUrl: '/images/l2-5-deadlock.svg', quiz: { question: 'Based on this circular dependency, what state is the database in?', options: ['A — Race Condition', 'B — Deadlock', 'C — Buffer Overflow', 'D — Cache Miss'], correct: 1 }, explanation: "DEPLOY — Kill All to clear the deadlock. Let the app retry transactions automatically." },
-  { level: 2, answer: 'delay', round: 6, levelName: "The Architect's Anatomy", type: 'image_quiz', title: "Round 6: The WAF False Positive", body: "Your WAF is blocking all users with apostrophes in their names (O'Reilly, D'Angelo) during the BIGGEST SALE OF THE YEAR.\n\nIdentify what type of security event this is.", imageUrl: '/images/l2-6-waf.svg', quiz: { question: "Your WAF is blocking customers named O'Reilly and D'Angelo. This is a:", options: ['A — Successful Hack Block', 'B — False Positive', 'C — Buffer Underflow', 'D — Zero-Day Exploit'], correct: 1 }, explanation: "DELAY — Bypassing WAF during a sale invites real SQL Injection. Fix the regex first." },
+  // ═══════════════════════════════════════════════════
+  //  LEVEL 1 — THE GROWTH SPURT (12 rounds · 45s each)
+  // ═══════════════════════════════════════════════════
 
-  // LEVEL 3 — Digital Forensic Trail
-  { level: 3, answer: 'delay', round: 1, levelName: 'Digital Forensic Trail', type: 'forensic_trail', title: 'Mission 1: The OS Crash', body: 'The app is crashing for a segment of users. Investigate the trail to determine severity before making your final deployment decision.', clues: [{ id: 'c1', label: 'Clue 1 — User Impact', text: 'Total user base: 2,000,000\nPercentage on old OS: 4%\nCrash happens at login — zero access to the app.\n\nCalculate how many users are affected.', question: '2M users, 4% on old OS. How many are affected?', options: ['A — 40,000 users', 'B — 80,000 users', 'C — 100,000 users', 'D — 20,000 users'], correct: 1, points: 2, explanation: '4% of 2,000,000 = 80,000 users locked out.' }, { id: 'c2', label: 'Clue 2 — Workaround', text: 'Crash occurs at the login screen.\nNo cached session available.\nNo alternative login method exists.\nThese users cannot access ANY part of the app.', question: 'Is there a workaround for the 80,000 affected users?', options: ['A — Yes, a workaround exists', 'B — No workaround available'], correct: 1, points: 2, explanation: 'No workaround. 80,000 users completely locked out.' }, { id: 'c3', label: 'Clue 3 — Fix Timeline', text: 'Fix development: 2 hours.\nQA testing required: 6 hours total.\nNo shortcut available for QA.', question: 'Given 80,000 users locked out with no workaround, what is right?', options: ['A — Deploy anyway — 96% still work', 'B — Delay for safety — fix before release'], correct: 1, points: 2, explanation: '80,000 locked out with no workaround is P0. Fix before deploying.' }], explanation: 'DELAY — 80,000 users locked out is a P0. You cannot release a broken login. Fix it first.' },
+  {
+    level: 1, answer: 'deploy', round: 1, levelName: 'The Growth Spurt', type: 'text',
+    title: 'Q1 — Influencer Spike',
+    body: 'FlowPay just got featured by a top influencer. Traffic is up 400%.\n\n→ Minor UI misalignment detected on iPhone 12 bezels\n→ Core payment flow: 100% functional\n→ Android, Web, iOS 14+: all perfect\n→ Millions of new users are trying to sign up RIGHT NOW\n\nDeploy or Delay?',
+    explanation: 'DEPLOY — A cosmetic bezel misalignment on one phone model does not justify losing a viral growth moment. Ship it.'
+  },
 
-  { level: 3, answer: 'deploy', round: 2, levelName: 'Digital Forensic Trail', type: 'forensic_trail', title: 'Mission 2: The Rate Limit Mystery', body: 'The API rate limiter seems misconfigured. Investigate whether this is actually a problem before deciding.', clues: [{ id: 'c1', label: 'Clue 1 — Traffic Check', text: 'Current API rate limit: 100 req/min\nIntended limit: 1,000 req/min\nMaximum real usage observed: 80 req/min\n\nThe limit is lower than intended — but does it matter?', question: 'Max usage is 80 req/min and limit is 100. Will users be blocked?', options: ['A — Yes, users will be blocked', 'B — No — 80 is under 100, no impact'], correct: 1, points: 2, explanation: '80 req/min is below the 100 limit. No user will be rate-limited.' }, { id: 'c2', label: 'Clue 2 — Security vs Config', text: 'Security team: this is a configuration error.\nNo evidence of malicious use.\nThe lower limit actually provides more DDoS protection.', question: 'Is this a security risk or just a configuration error?', options: ['A — Config Error only', 'B — Security Breach'], correct: 0, points: 2, explanation: 'Config error only. The lower value actually offers more DDoS protection.' }, { id: 'c3', label: 'Clue 3 — Fix Complexity', text: 'Changing rate limit: 2 minutes of work.\nRequires a full redeploy to take effect.\nCurrent release is already staged and ready.\nNo users are being blocked.', question: 'Should we delay for a 2-min config fix with zero user impact?', options: ['A — Yes, delay and fix now', 'B — No — deploy now, fix in next cycle'], correct: 1, points: 2, explanation: 'Zero user impact. Deploy now, fix config in next cycle.' }], explanation: 'DEPLOY — Zero user impact. Max usage (80) is below the limit (100). Ship now and fix the rate limit config next cycle.' },
+  {
+    level: 1, answer: 'delay', round: 2, levelName: 'The Growth Spurt', type: 'text',
+    title: 'Q2 — Ghost Refund',
+    body: 'A bug is issuing ghost refunds to 1 in every 500 transactions.\n\n→ $10,000 drained from company account in last 2 hours\n→ Rate accelerating as transaction volume grows\n→ Fix requires 45 minutes\n→ Every minute of delay costs more money\n\nDeploy or Delay?',
+    explanation: 'DELAY — A financial logic bug draining cash is a P0 emergency. Stop the bleeding before it becomes fatal.'
+  },
 
-  { level: 3, answer: 'deploy', round: 3, levelName: 'Digital Forensic Trail', type: 'forensic_trail', title: 'Mission 3: The Ghost in the Server', body: 'A server is crashing every 4 hours. Investigate the telemetry to understand root cause and best response.', clues: [{ id: 'c1', label: 'Clue 1 — Telemetry', text: 'CPU utilization: 10% (completely normal)\nRAM utilization: 98% (critical)\nPattern: RAM grows steadily from each restart.\nCPU stays flat while RAM climbs continuously.', question: 'CPU is 10%, RAM is 98% and climbing. What is this?', options: ['A — CPU Leak / Infinite Loop', 'B — Memory Leak'], correct: 1, points: 2, explanation: 'Classic memory leak: CPU normal, RAM climbs until OOM crash.' }, { id: 'c2', label: 'Clue 2 — Priority', text: 'Server crashes every 4 hours after restart.\nDuring downtime: 100% of users affected for ~5 minutes.\nEngineering team working on root cause.\nRoot cause fix ETA: 2-3 days.', question: 'Server crashing every 4 hours — what priority?', options: ['A — High Priority — needs immediate action', 'B — Medium Priority — can wait'], correct: 0, points: 2, explanation: 'High Priority. Regular crashes every 4 hours is unacceptable.' }, { id: 'c3', label: 'Clue 3 — Mitigation', text: 'Proposal: auto-restart the server every 2 hours.\nPrevents crash before RAM hits 100%.\nUsers experience zero downtime (graceful restart).\nBuys time for developers to find the actual leak.', question: 'Can we deploy auto-restart every 2 hours as a temporary patch?', options: ['A — Yes — valid DevOps mitigation', 'B — No — only fix root cause'], correct: 0, points: 2, explanation: 'Auto-restart is valid temporary mitigation. Keeps service up while team investigates.' }], explanation: 'DEPLOY — Deploy auto-restart to keep service running. Mitigate first, investigate second. Users stay online while team finds the memory leak.' },
+  {
+    level: 1, answer: 'deploy', round: 3, levelName: 'The Growth Spurt', type: 'text',
+    title: 'Q3 — Emoji Crash',
+    body: 'The 🚀 rocket emoji causes the transaction history page to crash.\n\n→ Affects only users who used 🚀 in their payment notes\n→ Estimated impact: 0.3% of users\n→ Core payments, login, dashboard: all working\n→ History page crash: no data loss, just display error\n\nDeploy or Delay?',
+    explanation: 'DEPLOY — An edge-case emoji display crash on a non-critical page does not block core functionality. Ship now.'
+  },
 
-  { level: 3, answer: 'delay', round: 4, levelName: 'Digital Forensic Trail', type: 'forensic_trail', title: 'Mission 4: The Payment Proxy', body: 'The payment gateway is returning errors. Investigate scope and options.', clues: [{ id: 'c1', label: 'Clue 1 — Error Source', text: 'Payment gateway returning 504 Gateway Timeout errors.\n504 = upstream server (provider) not responding.\nYour application code: no changes made.\nProvider status page: active incident.\nMultiple companies affected globally.', question: 'Gateway returning 504 errors. Whose fault?', options: ['A — Our code is at fault', 'B — Provider infrastructure fault'], correct: 1, points: 2, explanation: '504 indicates the upstream provider is timing out. Provider-side fault.' }, { id: 'c2', label: 'Clue 2 — Revenue Impact', text: 'Payment gateway handles ALL transactions.\nNo fallback payment method configured.\nCurrent error rate: 100% of payment attempts failing.\nRevenue: $0 processed per minute.', question: 'Does this affect 100% of revenue?', options: ['A — Yes, 100% of payments failing', 'B — No, partial impact only'], correct: 0, points: 2, explanation: 'Yes — 100% of revenue is blocked.' }, { id: 'c3', label: 'Clue 3 — Backup Option', text: 'Backup payment gateway (Stripe) exists.\nSwitching: 10 minutes of config + deployment.\nBackup gateway: fully tested.\nProvider ETA for fix: 2-4 hours (unknown).', question: 'Can we switch to a backup gateway in 10 minutes?', options: ['A — Yes, backup available', 'B — No backup available'], correct: 0, points: 2, explanation: 'Backup exists but deploying during active incident carries its own risks.' }], explanation: 'DELAY — Wait for provider stability then deploy backup gateway switch as a planned operation. Never rush deploys during active incidents.' },
+  {
+    level: 1, answer: 'delay', round: 4, levelName: 'The Growth Spurt', type: 'text',
+    title: 'Q4 — Compliance Wall',
+    body: 'Legal just flagged that updated Terms of Service MUST be live by tomorrow 9AM.\n\n→ Current release does not include the new ToS\n→ Operating without it after 9AM = regulatory violation\n→ Penalty: up to £500,000 fine\n→ ToS update takes 2 hours to integrate and test\n\nDeploy or Delay?',
+    explanation: 'DELAY — Regulatory compliance is non-negotiable. A £500k fine dwarfs any feature benefit. Integrate the ToS first.'
+  },
 
-  { level: 3, answer: 'deploy', round: 5, levelName: 'Digital Forensic Trail', type: 'forensic_trail', title: 'Mission 5: The CSS Conflict', body: 'A visual bug has been reported. Investigate the actual impact before deciding.', clues: [{ id: 'c1', label: 'Clue 1 — Severity', text: '"Add to Cart" buttons appear pink instead of red.\nCaused by a CSS specificity conflict.\nButtons are fully clickable and functional.', question: 'Buttons are pink instead of red — how severe?', options: ['A — P0 Critical — immediate fix required', 'B — P3 Low — cosmetic issue only'], correct: 1, points: 2, explanation: 'P3 — cosmetic only. Buttons work, users can checkout.' }, { id: 'c2', label: 'Clue 2 — Functional Impact', text: 'Checkout flow: WORKING\nAdd to cart: WORKING\nPayment processing: WORKING\nAll business logic: completely unaffected by CSS.', question: 'Does the pink button bug break any checkout logic?', options: ['A — Yes, checkout is broken', 'B — No, all logic works perfectly'], correct: 1, points: 2, explanation: 'No functional impact. Checkout works perfectly.' }, { id: 'c3', label: 'Clue 3 — Financial Risk', text: 'Users can see products: YES\nUsers can checkout: YES\nUsers can pay: YES\nDifference: pink buttons instead of red.\nFinancial risk to users: NONE', question: 'Will users lose money because of this CSS bug?', options: ['A — Yes, financial risk', 'B — No, zero financial risk'], correct: 1, points: 2, explanation: 'Zero financial risk. Pink vs red is purely cosmetic.' }], explanation: 'DEPLOY — Pure cosmetic issue. Buttons work, checkout works, payments work. Ship it and fix CSS in a hotfix.' },
+  {
+    level: 1, answer: 'deploy', round: 5, levelName: 'The Growth Spurt', type: 'text',
+    title: 'Q5 — Dark Mode',
+    body: 'Dark Mode feature is ready, but payment amount text is invisible for 0.5 seconds during the colour fade animation.\n\n→ 0.5s flash — amount is ALWAYS correct, just briefly invisible\n→ Dark Mode is opt-in — users choose it\n→ Light mode (default): completely unaffected\n→ Feature has been requested by 40,000 users\n\nDeploy or Delay?',
+    explanation: 'DEPLOY — An optional feature with a 0.5s cosmetic animation glitch is not a blocker. Users who are bothered can stay on Light Mode.'
+  },
 
-  { level: 3, answer: 'delay', round: 6, levelName: 'Digital Forensic Trail', type: 'forensic_trail', title: 'Mission 6: The SQL Injection Scare', body: "The WAF is blocking legitimate users. Investigate whether this is a security victory or a dangerous misconfiguration.", clues: [{ id: 'c1', label: 'Clue 1 — WAF Alert', text: "WAF BLOCKED: Search query containing \"O'Brian\"\nRule triggered: apostrophe character detected\nO'Brian is a legitimate Irish surname.", question: "WAF blocked a search for \"O'Brian\". Real attack or false positive?", options: ["A — Real SQL injection attack blocked", "B — False Positive — legitimate user blocked"], correct: 1, points: 2, explanation: "False positive. O'Brian is a real surname. WAF regex is too aggressive." }, { id: 'c2', label: 'Clue 2 — Scope', text: "WAF rule blocks ALL apostrophe characters in search.\nAffected: O'Brien, O'Reilly, D'Angelo, D'Souza...\nEstimated: 3-5% of user base cannot use search.", question: "Are ALL users with apostrophes in their names blocked?", options: ["A — Yes, all apostrophe names blocked", "B — No, only some affected"], correct: 0, points: 2, explanation: "Yes — any name with an apostrophe triggers the block." }, { id: 'c3', label: 'Clue 3 — Security Posture', text: "Search field code: NOT sanitized against SQL injection.\nWAF is the ONLY protection layer.\nIf we bypass WAF: search vulnerable to real SQL injection.\nCorrect fix: parameterized queries in the code.", question: "Is the search field code sanitized against SQL injection?", options: ["A — Yes, it is sanitized", "B — No, WAF is the only protection"], correct: 1, points: 2, explanation: "Not sanitized. Bypassing WAF without fixing code = open SQL injection vulnerability." }], explanation: 'DELAY — Search field is not sanitized. Bypassing WAF without fixing the code = SQL injection risk. Fix parameterized queries first.' },
+  {
+    level: 1, answer: 'delay', round: 6, levelName: 'The Growth Spurt', type: 'text',
+    title: 'Q6 — Double-Charge',
+    body: 'A caching race condition MIGHT charge users twice for the same transaction.\n\n→ Reproducible in 1 of 50 test runs\n→ Cannot predict which users will be affected\n→ Each double-charge = immediate chargeback + £25 penalty fee\n→ Fix confirmed — takes 1 hour\n\nDeploy or Delay?',
+    explanation: 'DELAY — A potential double-charge is a financial and trust catastrophe. Never deploy known billing bugs into production.'
+  },
 
-  { level: 3, answer: 'delay', round: 7, levelName: 'Digital Forensic Trail', type: 'forensic_trail', title: 'Mission 7: The Disk Space Devourer', body: 'Log files are consuming disk space at an alarming rate. Investigate the timeline and decide.', clues: [{ id: 'c1', label: 'Clue 1 — Timeline', text: 'Disk capacity: 50 GB total\nLog growth rate: 10 GB per hour\nAvailable space: 30 GB remaining\nWhen disk hits 100%: total system crash.', question: 'Logs at 10GB/hour, 30GB remaining. How long until disk is full?', options: ['A — 10 hours left', 'B — 5 hours left', 'C — 3 hours left', 'D — 1 hour left'], correct: 1, points: 2, explanation: '30 GB ÷ 10 GB/hour = 3 hours until total system crash.' }, { id: 'c2', label: 'Clue 2 — Log Options', text: 'Option A: Turn off logging entirely.\nProblem: Compliance regulations require audit logs.\nTurning off logs = regulatory violation.', question: 'Can we simply turn off logs to save disk space?', options: ['A — Yes, turn them off', 'B — No — compliance requires audit logs'], correct: 1, points: 2, explanation: 'Cannot turn off logs — compliance mandates audit logging.' }, { id: 'c3', label: 'Clue 3 — Current Impact', text: 'Application response time: NORMAL\nUser experience: CURRENTLY FINE\nBUT: disk fills in ~3 hours.\nRecovery from disk-full crash: 45-60 minutes minimum.', question: 'Is application performance currently affected?', options: ['A — Yes, app is slow now', 'B — Not yet — but crash in ~3 hours'], correct: 1, points: 2, explanation: 'Not yet affected — but 3 hours until total crash. Ticking time bomb.' }], explanation: 'DELAY — Crash in ~3 hours. Fix log verbosity, add log rotation, or expand disk before deploying anything new.' },
+  {
+    level: 1, answer: 'delay', round: 7, levelName: 'The Growth Spurt', type: 'text',
+    title: 'Q7 — VIP Support',
+    body: 'The top 10 investors in FlowPay cannot see their dashboard after the latest update.\n\n→ These 10 accounts hold 60% of FlowPay funding\n→ Board meeting is in 3 hours\n→ They are already emailing asking what is wrong\n→ Fix takes 30 minutes\n\nDeploy or Delay?',
+    explanation: 'DELAY — Losing investor confidence 3 hours before a board meeting is an existential risk. Fix it immediately.'
+  },
 
-  { level: 3, answer: 'deploy', round: 8, levelName: 'Digital Forensic Trail', type: 'forensic_trail', title: 'Mission 8: The IE11 Layout', body: 'A layout issue on Internet Explorer 11. Investigate whether this warrants blocking the release.', clues: [{ id: 'c1', label: 'Clue 1 — Traffic Share', text: 'Chrome: 68% | Safari: 18% | Firefox: 9% | Edge: 4.9%\nInternet Explorer 11: 0.1% of all traffic\nIE11 is a 10-year-old browser, no longer supported by Microsoft.', question: 'IE11 accounts for 0.1% of traffic. How would you classify this?', options: ['A — Low impact — 0.1% is negligible', 'B — High impact — must fix'], correct: 0, points: 2, explanation: '0.1% is negligible. Extremely limited impact.' }, { id: 'c2', label: 'Clue 2 — Bug Type', text: 'Navigation layout: visually scrambled on IE11.\nCheckout flow: fully functional.\nAll clicks: register correctly.\nAll transactions: process successfully.', question: 'IE11 layout is scrambled but logic works. Cosmetic or functional?', options: ['A — Cosmetic only — layout wrong, logic works', 'B — Functional — logic is broken'], correct: 0, points: 2, explanation: 'Cosmetic only. Layout looks bad but all functionality works.' }, { id: 'c3', label: 'Clue 3 — Modern Browsers', text: 'Chrome 90+: ✓ Perfect\nSafari 14+: ✓ Perfect\nFirefox 88+: ✓ Perfect\nEdge 90+: ✓ Perfect\nIE11: ✗ Layout scrambled (cosmetic only)\nMicrosoft officially ended IE11 support in June 2022.', question: 'Do Chrome, Safari and modern browsers work correctly?', options: ['A — Yes, all modern browsers perfect', 'B — No, multiple browsers affected'], correct: 0, points: 2, explanation: "All modern browsers work perfectly. Only abandoned IE11 has cosmetic issue." }], explanation: "DEPLOY — 0.1% of users on an abandoned browser have a cosmetic issue. All modern browsers work. Don't hold back 99.9% of users for IE11." },
+  {
+    level: 1, answer: 'deploy', round: 8, levelName: 'The Growth Spurt', type: 'text',
+    title: 'Q8 — Logo Swap',
+    body: 'Someone uploaded a low-resolution 72dpi logo to the homepage. The correct 300dpi version is ready.\n\n→ Functional impact: zero\n→ The logo just looks slightly blurry on Retina screens\n→ New logo file is tested and ready to go\n→ Zero risk — it is just an image swap\n\nDeploy or Delay?',
+    explanation: 'DEPLOY — A tested image replacement with zero functional risk should be shipped immediately. This is not a delay situation.'
+  },
 
-  // LEVEL 4 — The BlackBox Protocol
-  { level: 4, answer: 'deploy', round: 1, levelName: 'The BlackBox Protocol', type: 'decoder', title: 'Intercept Alpha', body: "BlackBox has intercepted an encrypted transmission.\n\nAll Level 4 transmissions use Caesar Cipher — Shift 3 backward.\n(Each letter shifts back 3: D→A, E→B, F→C...)\n\nDecode the message to determine your decision.", encodedText: 'PLQRU XL EXJ IRXQG. EDFNHQG ZRUNV ILQH.', decodedText: 'MINOR UI BUG FOUND. BACKEND WORKS FINE.', shiftValue: 3, hint: 'Shift each letter BACK by 3. Example: D→A, E→B, P→M, L→I, Q→N, R→O...', explanation: 'DEPLOY — Decoded: "MINOR UI BUG FOUND. BACKEND WORKS FINE." Minor UI bug, working backend. Ship it.' },
-  { level: 4, answer: 'delay', round: 2, levelName: 'The BlackBox Protocol', type: 'decoder', title: 'Intercept Bravo', body: "BlackBox intercept — encrypted transmission on secure channel.\n\nCaesar Cipher — Shift 3 backward.\n\nDecode the message before deciding.", encodedText: 'GDWDEDVH FRUUXSWLRQ. UHFRYHULQJ IURP EDFNXS.', decodedText: 'DATABASE CORRUPTION. RECOVERING FROM BACKUP.', shiftValue: 3, hint: 'Shift each letter BACK by 3. G→D, D→A, W→T, D→A...', explanation: 'DELAY — Decoded: "DATABASE CORRUPTION. RECOVERING FROM BACKUP." Never deploy during backup restoration.' },
-  { level: 4, answer: 'delay', round: 3, levelName: 'The BlackBox Protocol', type: 'decoder', title: 'Intercept Charlie', body: "BlackBox intercept — high-priority encrypted transmission.\n\nCaesar Cipher — Shift 3 backward.\n\nDecode immediately.", encodedText: 'VHFXULWB EUHDFK. VHDO DOO HQGSRLQWV.', decodedText: 'SECURITY BREACH. SEAL ALL ENDPOINTS.', shiftValue: 3, hint: 'Shift each letter BACK by 3. V→S, H→E, F→C, X→U...', explanation: 'DELAY — Decoded: "SECURITY BREACH. SEAL ALL ENDPOINTS." Active breach. All deployments halt.' },
-  { level: 4, answer: 'deploy', round: 4, levelName: 'The BlackBox Protocol', type: 'decoder', title: 'Intercept Delta', body: "BlackBox intercept — transmission from QA lead.\n\nCaesar Cipher — Shift 3 backward.\n\nDecode and decide.", encodedText: 'WHVWV SDVVHG ZLWK ZDUQLQJV. SHUIRUPDQFH LV VWDEOH.', decodedText: 'TESTS PASSED WITH WARNINGS. PERFORMANCE IS STABLE.', shiftValue: 3, hint: 'Shift each letter BACK by 3. W→T, H→E, V→S, W→T...', explanation: 'DEPLOY — Decoded: "TESTS PASSED WITH WARNINGS. PERFORMANCE IS STABLE." Tests passed, performance stable. Ship it.' },
-  { level: 4, answer: 'delay', round: 5, levelName: 'The BlackBox Protocol', type: 'decoder', title: 'Intercept Echo', body: "BlackBox intercept — urgent transmission on engineering channel.\n\nCaesar Cipher — Shift 3 backward.\n\nDecode before time runs out.", encodedText: 'XQUHSRUWHG DSL FKDQJH. EUHDNLQJ FKDQJHV GHWHFWHG.', decodedText: 'UNREPORTED API CHANGE. BREAKING CHANGES DETECTED.', shiftValue: 3, hint: 'Shift each letter BACK by 3. X→U, Q→N, U→R, H→E...', explanation: 'DELAY — Decoded: "UNREPORTED API CHANGE. BREAKING CHANGES DETECTED." Breaking changes undocumented = downstream systems fail.' },
-  { level: 4, answer: 'delay', round: 6, levelName: 'The BlackBox Protocol', type: 'decoder', title: 'Final Intercept — The Last Call', body: "FINAL ROUND — The BlackBox Protocol\n\nBlackBox has captured the final transmission.\n\nCaesar Cipher — Shift 3 backward.\n\nDecode it. The fate of FlowPay depends on your final decision.", encodedText: 'ORJ OHYHO LV VHW WR GHEXJ. GLVN VSDFH LV ORZ.', decodedText: 'LOG LEVEL IS SET TO DEBUG. DISK SPACE IS LOW.', shiftValue: 3, hint: 'Shift each letter BACK by 3. O→L, R→O, J→G, O→L...', explanation: 'DELAY — Decoded: "LOG LEVEL IS SET TO DEBUG. DISK SPACE IS LOW." DEBUG logs + low disk = disk-full crash incoming. Fix both first.' },
+  {
+    level: 1, answer: 'delay', round: 9, levelName: 'The Growth Spurt', type: 'text',
+    title: 'Q9 — Sunday Service',
+    body: 'A developer wants to move the scheduled 2AM Sunday maintenance window to RIGHT NOW (2PM Friday, peak traffic).\n\n→ Current active users: 45,000\n→ Maintenance causes 8 minutes of downtime\n→ 2AM Sunday: estimated 200 users online\n→ Reason given: "I want to go home early"\n\nDeploy or Delay?',
+    explanation: 'DELAY — Running maintenance during peak traffic for personal convenience is unacceptable. Stick to the maintenance window.'
+  },
+
+  {
+    level: 1, answer: 'deploy', round: 10, levelName: 'The Growth Spurt', type: 'text',
+    title: 'Q10 — Language Barrier',
+    body: 'The French language UI is accidentally showing Spanish text in 3 non-critical tooltip labels.\n\n→ Affected: tooltip text only — no buttons, forms, or payment flows\n→ French speakers still understand the UI context\n→ Core French payment functionality: 100% correct\n→ Fix is already in the next sprint\n\nDeploy or Delay?',
+    explanation: 'DEPLOY — Three wrong tooltip labels in a secondary language do not justify blocking the release. Log it and fix it in the next cycle.'
+  },
+
+  {
+    level: 1, answer: 'delay', round: 11, levelName: 'The Growth Spurt', type: 'text',
+    title: 'Q11 — API Leak',
+    body: 'A test API key has been found hardcoded in the public frontend JavaScript bundle.\n\n→ Key is live and has full read/write access to test environment\n→ Test environment mirrors 30% of production data structure\n→ Key has been visible in public code for 72 hours\n→ Fix: rotate key + remove from code (15 minutes)\n\nDeploy or Delay?',
+    explanation: 'DELAY — An exposed API key is a security incident in progress. Rotate the key and scrub the code before any deployment.'
+  },
+
+  {
+    level: 1, answer: 'deploy', round: 12, levelName: 'The Growth Spurt', type: 'text',
+    title: 'Q12 — Slow Receipt',
+    body: 'Receipt confirmation emails are taking 12 minutes to arrive instead of 12 seconds.\n\n→ Payments are processing instantly and correctly\n→ Money is transferred successfully\n→ Email delay is cosmetic — transactions are complete\n→ Email queue fix is being worked on separately\n\nDeploy or Delay?',
+    explanation: 'DEPLOY — Slow email receipts are annoying but do not affect payment processing. The money moves correctly. Ship the release.'
+  },
+
+  // ═══════════════════════════════════════════════════
+  //  LEVEL 2 — ARCHITECT'S ANATOMY (7 rounds · 60s each)
+  //  All rounds share ONE system map — teams identify the faulty node
+  //  Options: A=Load Balancer, B=App Cluster, C=Database, D=External API Gateway
+  // ═══════════════════════════════════════════════════
+
+  {
+    level: 2, answer: 'delay', round: 1, levelName: "Architect's Anatomy", type: 'image_quiz',
+    title: 'Q13 — The Overloaded Highway',
+    body: 'Study the FlowPay system diagram carefully.\n\nREAL-TIME ALERT: Red arrows show 100% of traffic flowing to Node B. Node C is receiving 0% traffic. The system is critically unbalanced.\n\nWhich node is the SOURCE of this traffic distribution problem?',
+    imageUrl: '/images/l2-system-map.svg',
+    quiz: {
+      question: 'Which node is causing the traffic imbalance — sending everything to B and nothing to C?',
+      options: ['A — Load Balancer', 'B — App Cluster', 'C — Database', 'D — External API Gateway'],
+      correct: 0
+    },
+    explanation: 'DELAY — The Load Balancer (A) has a misconfigured routing rule. Deploying now will overload the App Cluster. Fix the balancer first.'
+  },
+
+  {
+    level: 2, answer: 'delay', round: 2, levelName: "Architect's Anatomy", type: 'image_quiz',
+    title: 'Q14 — The Red Database',
+    body: 'Study the FlowPay system diagram carefully.\n\nREAL-TIME ALERT: One node is pulsating red with a critical metric reading "IOPS: 99%". Input/Output operations are maxed out. Write operations are beginning to queue and fail.\n\nWhich node is at critical capacity?',
+    imageUrl: '/images/l2-system-map.svg',
+    quiz: {
+      question: 'Which node is showing IOPS: 99% and pulsating red?',
+      options: ['A — Load Balancer', 'B — App Cluster', 'C — Database', 'D — External API Gateway'],
+      correct: 2
+    },
+    explanation: 'DELAY — The Database (C) is at 99% IOPS capacity. Deploying a new release now will push it over the edge and cause data write failures.'
+  },
+
+  {
+    level: 2, answer: 'deploy', round: 3, levelName: "Architect's Anatomy", type: 'image_quiz',
+    title: 'Q15 — The Version Ghost',
+    body: 'Study the FlowPay system diagram carefully.\n\nREAL-TIME ALERT: A version mismatch has been detected. The CDN is serving Version 2.0 assets but one node is still running Version 1.0 code. Some users see the new UI but get old API responses.\n\nWhich node is running the outdated version?',
+    imageUrl: '/images/l2-system-map.svg',
+    quiz: {
+      question: 'Which node is stuck on Version 1.0 while the CDN has Version 2.0?',
+      options: ['A — Load Balancer', 'B — App Cluster', 'C — Database', 'D — External API Gateway'],
+      correct: 1
+    },
+    explanation: 'DEPLOY — Pushing the update to the App Cluster (B) resolves the version mismatch and aligns it with the CDN. This is the deployment itself.'
+  },
+
+  {
+    level: 2, answer: 'delay', round: 4, levelName: "Architect's Anatomy", type: 'image_quiz',
+    title: 'Q16 — The Forbidden Gateway',
+    body: 'Study the FlowPay system diagram carefully.\n\nREAL-TIME ALERT: Every outbound request line from one node is showing a red "403 Forbidden" response. Payment processing, authentication, and email confirmations are all failing for affected users.\n\nWhich node is receiving 403 errors on every request?',
+    imageUrl: '/images/l2-system-map.svg',
+    quiz: {
+      question: 'Which node is showing "403 Forbidden" on every outbound request?',
+      options: ['A — Load Balancer', 'B — App Cluster', 'C — Database', 'D — External API Gateway'],
+      correct: 3
+    },
+    explanation: 'DELAY — The External API Gateway (D) is returning 403 on all calls. This means payments and auth are broken. Fix the API credentials before deploying.'
+  },
+
+  {
+    level: 2, answer: 'deploy', round: 5, levelName: "Architect's Anatomy", type: 'image_quiz',
+    title: 'Q17 — The Sawtooth Memory',
+    body: 'Study the FlowPay system diagram carefully.\n\nREAL-TIME ALERT: One node\'s memory graph is showing a sharp "Sawtooth" pattern — rising steeply then dropping suddenly, repeating every 4 minutes. This indicates a memory leak with auto-restart recovery.\n\nWhich node has the sawtooth memory pattern?',
+    imageUrl: '/images/l2-system-map.svg',
+    quiz: {
+      question: 'Which node is showing the sawtooth memory leak pattern?',
+      options: ['A — Load Balancer', 'B — App Cluster', 'C — Database', 'D — External API Gateway'],
+      correct: 1
+    },
+    explanation: 'DEPLOY — The App Cluster (B) has a manageable memory leak with auto-recovery. Deploy the fix now to resolve it cleanly rather than letting it continue crashing.'
+  },
+
+  {
+    level: 2, answer: 'delay', round: 6, levelName: "Architect's Anatomy", type: 'image_quiz',
+    title: 'Q18 — The European Blackout',
+    body: 'Study the FlowPay system diagram carefully.\n\nREAL-TIME ALERT: A world map overlay shows "Offline" status icons appearing exclusively over European regions. All other regions (Americas, Asia, Africa) are fully operational.\n\nWhich node handles the geographic routing that would cause region-specific failures?',
+    imageUrl: '/images/l2-system-map.svg',
+    quiz: {
+      question: 'Which node is responsible for the European region going offline?',
+      options: ['A — Load Balancer', 'B — App Cluster', 'C — Database', 'D — External API Gateway'],
+      correct: 3
+    },
+    explanation: 'DELAY — The External API Gateway (D) handles regional routing and third-party integrations like SEPA payments for Europe. It needs fixing before European users can transact.'
+  },
+
+  {
+    level: 2, answer: 'delay', round: 7, levelName: "Architect's Anatomy", type: 'image_quiz',
+    title: 'Q19 — Disk Full',
+    body: 'Study the FlowPay system diagram carefully.\n\nREAL-TIME ALERT: One node\'s storage cylinder is shown filled completely to the brim with a bright red "DISK FULL" overlay. When disk hits 100%, the entire system crashes and all operations halt.\n\nWhich node has the disk full condition?',
+    imageUrl: '/images/l2-system-map.svg',
+    quiz: {
+      question: 'Which node is showing the "DISK FULL" critical overlay?',
+      options: ['A — Load Balancer', 'B — App Cluster', 'C — Database', 'D — External API Gateway'],
+      correct: 2
+    },
+    explanation: 'DELAY — The Database (C) disk is full. Any write operation — payment, registration, log — will fail immediately. Clear disk space before deploying anything.'
+  },
+
+  // ═══════════════════════════════════════════════════
+  //  LEVEL 3 — THE DATA TRAIL (6 missions · 90s each)
+  //  3 clues per mission (+2 pts each), 2 options (A/B) per clue
+  // ═══════════════════════════════════════════════════
+
+  {
+    level: 3, answer: 'delay', round: 1, levelName: 'The Data Trail', type: 'forensic_trail',
+    title: 'Mission 1 — Shadow Cash',
+    body: 'Anomalous financial activity detected in FlowPay transaction logs. Investigate the trail to determine severity and correct action.',
+    clues: [
+      {
+        id: 'c1', label: 'Clue 1 — Scope of Impact',
+        text: 'Forensic scan of transaction logs reveals an anomaly in the payment processing module.\n\nA: 10 users have received incorrect transaction confirmations.\nB: $10,000 has silently disappeared from the reconciliation ledger.',
+        question: 'What is the true impact of this anomaly?',
+        options: ['A — 10 users affected', 'B — $10,000 missing from ledger'],
+        correct: 1, points: 2,
+        explanation: 'The real issue is $10,000 missing from the ledger — a critical financial discrepancy.'
+      },
+      {
+        id: 'c2', label: 'Clue 2 — Root Cause',
+        text: 'Deep dive into the payment processing code reveals the source of the missing funds.\n\nA: SQL Injection vulnerability allowing transaction manipulation.\nB: Business logic error in the refund calculation formula.',
+        question: 'What caused the $10,000 discrepancy?',
+        options: ['A — SQL Injection', 'B — Logic Error in refund formula'],
+        correct: 0, points: 2,
+        explanation: 'An SQL Injection vulnerability is actively exploiting the payment system — this is a live attack.'
+      },
+      {
+        id: 'c3', label: 'Clue 3 — Recovery Path',
+        text: 'Two recovery options have been proposed by the engineering team.\n\nA: 4-hour emergency patch to fix the SQLi vulnerability and reconcile funds.\nB: 1-minute database reset that would wipe the last 24 hours of transactions.',
+        question: 'Which recovery option is appropriate?',
+        options: ['A — 4-hour patch and reconcile', 'B — 1-minute database reset'],
+        correct: 0, points: 2,
+        explanation: 'A 4-hour patch preserves transaction history. A 1-minute reset would destroy 24hrs of legitimate customer data.'
+      }
+    ],
+    explanation: 'DELAY — Active SQL Injection draining funds requires an emergency patch. Never deploy new features during an active financial attack.'
+  },
+
+  {
+    level: 3, answer: 'delay', round: 2, levelName: 'The Data Trail', type: 'forensic_trail',
+    title: 'Mission 2 — Disk Eater',
+    body: 'Storage alerts firing across the FlowPay infrastructure. Investigate the logs to understand what is consuming disk space and how much time remains.',
+    clues: [
+      {
+        id: 'c1', label: 'Clue 1 — What Is Growing',
+        text: 'Storage monitoring dashboard shows one category exploding in size.\n\nA: Application log files growing at 10GB per hour.\nB: User-generated content growing due to new viral feature.',
+        question: 'What is consuming the disk space?',
+        options: ['A — Log files (10GB/hour)', 'B — User content growth'],
+        correct: 0, points: 2,
+        explanation: 'Application logs are growing at 10GB per hour — an abnormal rate that points to a misconfiguration.'
+      },
+      {
+        id: 'c2', label: 'Clue 2 — Why Logs Are Exploding',
+        text: 'Engineering investigates what triggered the log explosion.\n\nA: Debug Mode was accidentally left ON in the production environment.\nB: A user has found a way to hack the logging system remotely.',
+        question: 'Why are logs growing at 10GB per hour?',
+        options: ['A — Debug Mode ON in production', 'B — External logging hack'],
+        correct: 0, points: 2,
+        explanation: 'Debug Mode logs every internal operation — in production this generates massive log volumes instantly.'
+      },
+      {
+        id: 'c3', label: 'Clue 3 — Time Remaining',
+        text: 'Current disk usage: 85%. Growth rate: 10GB/hour. Total disk: 50GB.\n\nA: Approximately 10 minutes until disk is completely full.\nB: Approximately 2 days until disk is completely full.',
+        question: 'How long until the disk hits 100%?',
+        options: ['A — ~10 minutes left', 'B — ~2 days left'],
+        correct: 0, points: 2,
+        explanation: '85% used, 7.5GB remaining, growing at 10GB/hour = ~45 minutes. Critically urgent — minutes not days.'
+      }
+    ],
+    explanation: 'DELAY — Disk full in under an hour will crash the entire system. Turn off Debug Mode and clear logs before any deployment.'
+  },
+
+  {
+    level: 3, answer: 'deploy', round: 3, levelName: 'The Data Trail', type: 'forensic_trail',
+    title: 'Mission 3 — Zombie API',
+    body: 'Unusual traffic patterns detected on FlowPay\'s deprecated v1 API endpoint. Investigate the source and impact.',
+    clues: [
+      {
+        id: 'c1', label: 'Clue 1 — Impact on Core System',
+        text: 'Traffic analysis shows v1 API receiving unexpected load.\n\nA: The core FlowPay application is down due to this traffic.\nB: Only the deprecated v1 API endpoint is being hit — core app is unaffected.',
+        question: 'Is the core application affected?',
+        options: ['A — Core app is down', 'B — Only deprecated v1 API is hit'],
+        correct: 1, points: 2,
+        explanation: 'The deprecated v1 API is being hit but the core application remains fully operational.'
+      },
+      {
+        id: 'c2', label: 'Clue 2 — Source of Traffic',
+        text: 'Deep packet inspection reveals the source of the v1 API traffic.\n\nA: A botnet of 50,000 automated bots are hammering the endpoint.\nB: Real users with old mobile app versions that never updated.',
+        question: 'Who is sending traffic to the v1 API?',
+        options: ['A — Botnet attack', 'B — Real users on old app versions'],
+        correct: 0, points: 2,
+        explanation: 'A botnet is driving the traffic — not real users. Old app users are a minor concern; the botnet is the primary threat.'
+      },
+      {
+        id: 'c3', label: 'Clue 3 — Mitigation Strategy',
+        text: 'Two approaches proposed to handle the botnet traffic.\n\nA: Deploy a firewall rule to block the botnet IPs and rate-limit the v1 endpoint.\nB: Rewrite the entire v1 API from scratch to eliminate the attack surface.',
+        question: 'Which mitigation is appropriate right now?',
+        options: ['A — Firewall block and rate-limit', 'B — Rewrite entire v1 API'],
+        correct: 0, points: 2,
+        explanation: 'A targeted firewall block stops the attack immediately. A full API rewrite takes weeks and is not an emergency response.'
+      }
+    ],
+    explanation: 'DEPLOY — Core app is unaffected. Block the botnet with a firewall rule and deploy. The deprecated API issue is contained.'
+  },
+
+  {
+    level: 3, answer: 'delay', round: 4, levelName: 'The Data Trail', type: 'forensic_trail',
+    title: 'Mission 4 — Silent Fail',
+    body: 'Customer support tickets are suddenly spiking. Users are reporting an issue but no errors are showing in the monitoring dashboard. Investigate.',
+    clues: [
+      {
+        id: 'c1', label: 'Clue 1 — What Users Are Reporting',
+        text: 'Support ticket analysis over the last 2 hours.\n\nA: Users are not receiving payment receipt confirmation emails.\nB: Users report payments are not going through at all.',
+        question: 'What is the primary user complaint?',
+        options: ['A — No receipt emails being received', 'B — Payments failing entirely'],
+        correct: 0, points: 2,
+        explanation: 'Users are not receiving receipt emails. Payments are processing but confirmations are silently failing.'
+      },
+      {
+        id: 'c2', label: 'Clue 2 — Root Cause',
+        text: 'Engineering digs into the email pipeline.\n\nA: The email delivery service (Mailer) is down — queue has 50,000 undelivered emails.\nB: The database is down — emails cannot be retrieved.',
+        question: 'Why are receipt emails not being sent?',
+        options: ['A — Email Mailer service is down', 'B — Database is down'],
+        correct: 0, points: 2,
+        explanation: 'The Mailer service is offline with a growing queue of 50,000 unsent receipts. Payments are fine but evidence is missing.'
+      },
+      {
+        id: 'c3', label: 'Clue 3 — Support Volume',
+        text: 'Checking the customer support queue impact.\n\nA: 500+ support tickets already raised and growing rapidly.\nB: Zero support tickets — users have not noticed yet.',
+        question: 'What is the current support ticket volume?',
+        options: ['A — 500+ tickets and growing', 'B — Zero tickets raised'],
+        correct: 0, points: 2,
+        explanation: '500 tickets means 500 users are already concerned their payment did not go through. This is a trust and compliance issue.'
+      }
+    ],
+    explanation: 'DELAY — 500 users think their payments failed due to missing receipts. Fix the Mailer service before deploying anything new.'
+  },
+
+  {
+    level: 3, answer: 'deploy', round: 5, levelName: 'The Data Trail', type: 'forensic_trail',
+    title: 'Mission 5 — Memory Ghost',
+    body: 'A server monitoring alert has been triggered. Investigate the telemetry data to determine severity and the right response.',
+    clues: [
+      {
+        id: 'c1', label: 'Clue 1 — CPU Status',
+        text: 'Checking CPU utilisation on the affected server.\n\nA: CPU is at 5% — completely normal and idle.\nB: CPU is at 100% — fully spiked and unresponsive.',
+        question: 'What is the CPU utilisation on the affected server?',
+        options: ['A — CPU at 5% (normal)', 'B — CPU at 100% (spiked)'],
+        correct: 0, points: 2,
+        explanation: 'CPU is normal at 5%. The problem is not compute-related — it is memory.'
+      },
+      {
+        id: 'c2', label: 'Clue 2 — Root Cause Diagnosis',
+        text: 'Correlating CPU (5%) with RAM (rising 98%) telemetry.\n\nA: Classic Memory Leak — RAM climbs continuously while CPU stays normal.\nB: High Traffic Surge — both CPU and RAM spike together.',
+        question: 'What does CPU 5% + RAM 98% climbing indicate?',
+        options: ['A — Memory Leak', 'B — High Traffic Surge'],
+        correct: 0, points: 2,
+        explanation: 'Low CPU + climbing RAM = textbook memory leak. Objects are being allocated but never garbage collected.'
+      },
+      {
+        id: 'c3', label: 'Clue 3 — Temporary Fix',
+        text: 'Engineering proposes a temporary mitigation while the leak is investigated.\n\nA: Automated server restart every 3 hours prevents RAM from hitting 100% — service stays up.\nB: No temporary fix possible — must wait for full root cause analysis (2-3 days).',
+        question: 'Can a temporary fix keep the service running?',
+        options: ['A — Auto-restart every 3 hours works', 'B — No temporary fix available'],
+        correct: 0, points: 2,
+        explanation: 'An auto-restart every 3 hours is a valid DevOps mitigation — keeps service running while the actual leak is investigated.'
+      }
+    ],
+    explanation: 'DEPLOY — A memory leak with a working auto-restart mitigation is manageable. Deploy the fix and keep the service running.'
+  },
+
+  {
+    level: 3, answer: 'delay', round: 6, levelName: 'The Data Trail', type: 'forensic_trail',
+    title: 'Mission 6 — The Breach',
+    body: 'A security scanner has flagged an anomaly in FlowPay\'s cloud storage configuration. Investigate immediately.',
+    clues: [
+      {
+        id: 'c1', label: 'Clue 1 — What Was Exposed',
+        text: 'Security audit of the cloud storage bucket reveals the scope of exposure.\n\nA: Customer PII (names, emails, partial card data) was publicly accessible.\nB: Company logo assets were publicly accessible.',
+        question: 'What data was exposed in the storage misconfiguration?',
+        options: ['A — Customer PII exposed', 'B — Logo assets exposed'],
+        correct: 0, points: 2,
+        explanation: 'Customer PII exposure is a GDPR/PCI-DSS critical incident. This is not a minor configuration error.'
+      },
+      {
+        id: 'c2', label: 'Clue 2 — Root Cause',
+        text: 'Investigation into what caused the data exposure.\n\nA: An S3 bucket was accidentally set to Public — all files world-readable.\nB: A CSS bug caused the wrong image to render on the profile page.',
+        question: 'What caused the PII to be exposed?',
+        options: ['A — S3 bucket set to Public', 'B — CSS rendering bug'],
+        correct: 0, points: 2,
+        explanation: 'A publicly accessible S3 bucket with customer PII is a live data breach requiring immediate incident response.'
+      },
+      {
+        id: 'c3', label: 'Clue 3 — Response Protocol',
+        text: 'Two response options are proposed.\n\nA: 2-hour security lockdown — make bucket private, audit access logs, notify affected users, file ICO report.\nB: No action required — assume no one accessed the exposed data.',
+        question: 'What is the correct incident response?',
+        options: ['A — 2-hour lockdown and full incident response', 'B — No action needed'],
+        correct: 0, points: 2,
+        explanation: 'GDPR mandates breach notification within 72 hours. Assuming no access without checking logs is grossly negligent.'
+      }
+    ],
+    explanation: 'DELAY — Active data breach in progress. Initiate full incident response: lock bucket, audit logs, notify users, file regulatory report.'
+  },
+
+  // ═══════════════════════════════════════════════════
+  //  LEVEL 4 — THE FINAL SIEGE (5 rounds · 180s each)
+  //  Caesar Cipher Shift -3 (decode backward by 3)
+  // ═══════════════════════════════════════════════════
+
+  {
+    level: 4, answer: 'delay', round: 1, levelName: 'The Final Siege', type: 'decoder',
+    title: 'Intercept Alpha — Priority ONE',
+    body: 'BlackBox has intercepted an encrypted transmission from the FlowPay operations channel.\n\nCaesar Cipher — Shift 3 backward.\n(Each letter shifts back: D→A, E→B, F→C...)\n\nDecode the message to determine your response.',
+    encodedText: 'DWWDFN GHWHFWHG',
+    decodedText: 'ATTACK DETECTED',
+    shiftValue: 3,
+    hint: 'Shift BACK by 3. D→A, W→T, W→T, D→A, F→C, N→K...',
+    explanation: 'DELAY — ATTACK DETECTED. An active attack is in progress. Halt all deployments and initiate security protocols immediately.'
+  },
+
+  {
+    level: 4, answer: 'delay', round: 2, levelName: 'The Final Siege', type: 'decoder',
+    title: 'Intercept Bravo — URGENT',
+    body: 'BlackBox intercept — critical infrastructure alert on emergency channel.\n\nCaesar Cipher — Shift 3 backward.\n\nDecode before deciding.',
+    encodedText: 'VHUYHU RQ ILUH',
+    decodedText: 'SERVER ON FIRE',
+    shiftValue: 3,
+    hint: 'Shift BACK by 3. V→S, H→E, U→R, Y→V... think what "server" encodes to.',
+    explanation: 'DELAY — SERVER ON FIRE. A critical server failure is occurring. No deployments during infrastructure emergencies.'
+  },
+
+  {
+    level: 4, answer: 'deploy', round: 3, levelName: 'The Final Siege', type: 'decoder',
+    title: 'Intercept Charlie — Status Report',
+    body: 'BlackBox intercept — QA team status transmission.\n\nCaesar Cipher — Shift 3 backward.\n\nDecode to understand current readiness.',
+    encodedText: 'DOO WHVWV SDVV',
+    decodedText: 'ALL TESTS PASS',
+    shiftValue: 3,
+    hint: 'Shift BACK by 3. D→A, O→L, O→L... first word is very short.',
+    explanation: 'DEPLOY — ALL TESTS PASS. QA has signed off on everything. Green light to ship.'
+  },
+
+  {
+    level: 4, answer: 'deploy', round: 4, levelName: 'The Final Siege', type: 'decoder',
+    title: 'Intercept Delta — Security Scan',
+    body: 'BlackBox intercept — security team transmission after audit.\n\nCaesar Cipher — Shift 3 backward.\n\nDecode the security clearance message.',
+    encodedText: 'GDWD LV VDIH',
+    decodedText: 'DATA IS SAFE',
+    shiftValue: 3,
+    hint: 'Shift BACK by 3. G→D, D→A, W→T, D→A... first word is 4 letters.',
+    explanation: 'DEPLOY — DATA IS SAFE. Security audit passed. Customer data is protected. Cleared for deployment.'
+  },
+
+  {
+    level: 4, answer: 'delay', round: 5, levelName: 'The Final Siege', type: 'decoder',
+    title: 'Final Intercept — The Last Call',
+    body: 'FINAL ROUND — The Last Siege.\n\nBlackBox has captured the final transmission.\n\nCaesar Cipher — Shift 3 backward.\n\nThe fate of FlowPay depends on this decode.',
+    encodedText: 'VBVWHP FULWLFDO',
+    decodedText: 'SYSTEM CRITICAL',
+    shiftValue: 3,
+    hint: 'Shift BACK by 3. V→S, B→Y, V→S, W→T, H→E, P→M... what 6-letter word starts with SY?',
+    explanation: 'DELAY — SYSTEM CRITICAL. The system is in a critical failure state. Deploying now would make things catastrophically worse.'
+  },
+
 ];
+
 module.exports = SCENARIOS;

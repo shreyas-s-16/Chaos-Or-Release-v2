@@ -78,7 +78,7 @@ const PROJECTOR_PASSWORD = process.env.PROJECTOR_PASSWORD || 'projector123';
 // NO BRIEFING WINDOW
 const BRIEFING_DURATION = 0;   // Briefing removed
 const SABOTAGE_DURATION = 15;  // Last 15s of breach
-const ROLLBACK_WINDOW = 7;
+const ROLLBACK_WINDOW = 15; // per handbook: 15 seconds
 const RECON_DURATION = 10;
 
 const BREACH_DURATION_BY_LEVEL = { 1: 45, 2: 60, 3: 90, 4: 180 };
