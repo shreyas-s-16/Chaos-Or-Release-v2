@@ -3297,18 +3297,49 @@ body.sabotage-pulse {
   flex-shrink: 0;
 }
 
-/* Projector end screen — bigger everything */
+/* Projector end screen — true fullscreen cinematic layout */
 .screen.end-screen-layout.projector-end {
-  padding: 24px 40px 32px;
-  gap: 20px;
+  padding: 32px 60px 40px;
+  gap: 16px;
+  justify-content: flex-start;
+  background: radial-gradient(ellipse 80% 50% at 50% 0%, rgba(229, 52, 26, 0.12) 0%, transparent 60%), var(--bg);
+}
+
+.projector-end .end-header {
+  width: 100%;
 }
 
 .projector-end .end-title {
-  font-size: clamp(56px, 10vw, 100px);
+  font-size: clamp(64px, 11vw, 120px);
+  letter-spacing: 12px;
+}
+
+.projector-end .end-sub {
+  font-size: 16px;
+  letter-spacing: 6px;
+}
+
+.projector-end .end-podium {
+  gap: 28px;
+  margin: 8px 0;
 }
 
 .projector-end .end-lb-wrap {
-  max-width: 900px;
+  max-width: 100%;
+  width: 100%;
+  flex: 1;
+}
+
+.projector-end .end-leaderboard-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(420px, 1fr));
+  gap: 10px;
+  width: 100%;
+}
+
+.projector-end .end-footer {
+  font-size: 13px;
+  letter-spacing: 3px;
 }
 
 /* Team end screen — highlight own row more clearly */

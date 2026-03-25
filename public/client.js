@@ -1625,12 +1625,12 @@ function renderEndScreen() {
     const medals = ['\uD83E\uDD47', '\uD83E\uDD48', '\uD83E\uDD49'];
     // Visual order: 2nd | 1st | 3rd
     const order = [1, 0, 2];
-    const heights = isProjector ? ['130px', '190px', '100px'] : ['90px', '130px', '70px'];
+    const heights = isProjector ? ['160px', '230px', '120px'] : ['90px', '130px', '70px'];
     const colors = ['#94a3b8', '#f59e0b', '#cd7f32'];
-    const nameSize = isProjector ? '20px' : '13px';
-    const scoreSize = isProjector ? '26px' : '17px';
-    const medalSize = isProjector ? '42px' : '26px';
-    const barWidth = isProjector ? '110px' : '72px';
+    const nameSize = isProjector ? '26px' : '13px';
+    const scoreSize = isProjector ? '32px' : '17px';
+    const medalSize = isProjector ? '52px' : '26px';
+    const barWidth = isProjector ? '140px' : '72px';
     podiumEl.innerHTML = order.map((rank, slot) => {
       const t = teams[rank];
       if (!t) return '';
@@ -1649,22 +1649,27 @@ function renderEndScreen() {
     lbEl.innerHTML = teams.map((t, i) => {
       const isMe = t.name === myName;
       const penalty = (t.history || []).find(h => h.decision === 'hoarding');
-      const penNote = penalty ? ` <span style="color:var(--red);font-size:10px">(${penalty.pts} card penalty)</span>` : '';
+      const penNote = penalty ? ` <span style="color:var(--red);font-size:${isProjector ? '13px' : '10px'}">(${penalty.pts} card penalty)</span>` : '';
       const rankColor = i === 0 ? '#f59e0b' : i === 1 ? '#94a3b8' : i === 2 ? '#cd7f32' : 'var(--muted)';
-      // Projector: larger rows; Team: highlight own row
-      const rowPad = isProjector ? '14px 20px' : isMe ? '14px 14px' : '10px 14px';
-      const rankSize = isProjector ? '24px' : isMe ? '22px' : '16px';
-      const nameSize = isProjector ? '18px' : isMe ? '16px' : '13px';
-      const scoreSize = isProjector ? '28px' : isMe ? '24px' : '18px';
-      return `<div class="${isMe ? 'end-my-row' : ''}" style="display:flex;align-items:center;gap:14px;padding:${rowPad};
-        background:${isMe ? 'rgba(40,200,64,0.12)' : 'var(--surface)'};
-        border:${isMe ? '2px solid var(--green)' : '0.5px solid var(--border-hi)'};
-        border-radius:6px;">
-        <div style="font-family:var(--font-mono);font-size:${rankSize};color:${isMe ? 'var(--green)' : rankColor};width:36px;text-align:center;font-weight:700;">${i + 1}</div>
+      const rowPad = isProjector ? '18px 24px' : isMe ? '14px 14px' : '10px 14px';
+      const rankSize = isProjector ? '32px' : isMe ? '22px' : '16px';
+      const nameSize = isProjector ? '24px' : isMe ? '16px' : '13px';
+      const scoreSize = isProjector ? '36px' : isMe ? '24px' : '18px';
+      const rowBg = isProjector
+        ? (i === 0 ? 'rgba(245,158,11,0.08)' : i === 1 ? 'rgba(148,163,184,0.05)' : i === 2 ? 'rgba(205,127,50,0.05)' : 'var(--surface)')
+        : (isMe ? 'rgba(40,200,64,0.12)' : 'var(--surface)');
+      const rowBorder = isProjector
+        ? (i === 0 ? '1px solid rgba(245,158,11,0.4)' : '0.5px solid var(--border-hi)')
+        : (isMe ? '2px solid var(--green)' : '0.5px solid var(--border-hi)');
+      return `<div class="${isMe ? 'end-my-row' : ''}" style="display:flex;align-items:center;gap:16px;padding:${rowPad};
+        background:${rowBg};
+        border:${rowBorder};
+        border-radius:8px;${i === 0 && isProjector ? 'box-shadow:0 0 30px rgba(245,158,11,0.15);' : ''}">
+        <div style="font-family:var(--font-display);font-size:${rankSize};color:${isMe ? 'var(--green)' : rankColor};min-width:48px;text-align:center;font-weight:700;">${i + 1}</div>
         <div style="flex:1;">
-          <div style="font-family:var(--font-mono);font-size:${nameSize};color:${isMe ? '#fff' : 'var(--fg)'};font-weight:${isMe ? '700' : '400'};">${t.name}${isMe ? ' \u2190 YOU' : ''}${penNote}</div>
+          <div style="font-family:var(--font-display);font-size:${nameSize};color:${isMe ? '#fff' : 'var(--text)'};font-weight:700;letter-spacing:${isProjector ? '2px' : '0px'};">${t.name}${isMe ? ' ← YOU' : ''}${penNote}</div>
         </div>
-        <div style="font-family:var(--font-mono);font-size:${scoreSize};font-weight:700;color:${(t.score || 0) >= 0 ? 'var(--green)' : 'var(--red)'};">
+        <div style="font-family:var(--font-display);font-size:${scoreSize};font-weight:700;color:${(t.score || 0) >= 0 ? 'var(--green)' : 'var(--red)'};">
           ${(t.score || 0) >= 0 ? '+' : ''}${t.score || 0}
         </div>
       </div>`;
