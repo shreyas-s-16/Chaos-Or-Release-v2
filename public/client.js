@@ -979,7 +979,7 @@ function renderTeamScenario(team, s, phase) {
 
 function renderTextLevel(team, s, phase) {
   if (team.frozen) { $('decision-row').style.display = 'none'; return; }
-  $('decision-row').style.display = 'grid';
+  $('decision-row').style.display = 'flex';
   const myDec = L.decisions[key(L.teamName)] ||
     L.decisions[key(L.teamName?.toLowerCase())] || null;
   $('btn-deploy').className = 'btn-decision btn-deploy' + (myDec === 'deploy' ? ' selected' : '');
@@ -1048,10 +1048,10 @@ function renderImageQuizLevel(team, s, phase) {
 
   // Unlock deploy/delay only if quiz correct
   if (isCorrect && !myDec && !team.frozen) {
-    $('decision-row').style.display = 'grid';
+    $('decision-row').style.display = 'flex';
     $('btn-deploy').disabled = false; $('btn-delay').disabled = false;
   } else if (myDec) {
-    $('decision-row').style.display = 'grid';
+    $('decision-row').style.display = 'flex';
     $('btn-deploy').className = 'btn-decision btn-deploy' + (myDec === 'deploy' ? ' selected' : '');
     $('btn-delay').className = 'btn-decision btn-delay' + (myDec === 'delay' ? ' selected' : '');
     $('btn-deploy').disabled = true; $('btn-delay').disabled = true;
@@ -1104,13 +1104,13 @@ function renderForensicLevel(team, s, phase) {
   // Show Deploy/Delay after all clues
   const myDec = L.decisions[key(L.teamName)];
   if (allSolved && !team.frozen) {
-    $('decision-row').style.display = 'grid';
+    $('decision-row').style.display = 'flex';
     const dec = myDec;
     $('btn-deploy').className = 'btn-decision btn-deploy' + (dec === 'deploy' ? ' selected' : '');
     $('btn-delay').className = 'btn-decision btn-delay' + (dec === 'delay' ? ' selected' : '');
     $('btn-deploy').disabled = !!dec; $('btn-delay').disabled = !!dec;
   } else if (myDec) {
-    $('decision-row').style.display = 'grid';
+    $('decision-row').style.display = 'flex';
     $('btn-deploy').className = 'btn-decision btn-deploy' + (myDec === 'deploy' ? ' selected' : '');
     $('btn-delay').className = 'btn-decision btn-delay' + (myDec === 'delay' ? ' selected' : '');
     $('btn-deploy').disabled = true; $('btn-delay').disabled = true;
@@ -1161,12 +1161,12 @@ function renderDecoderLevel(team, s, phase) {
   // Show deploy/delay if decoded correctly
   const myDec = L.decisions[key(L.teamName)];
   if (correct && !team.frozen) {
-    $('decision-row').style.display = 'grid';
+    $('decision-row').style.display = 'flex';
     $('btn-deploy').className = 'btn-decision btn-deploy' + (myDec === 'deploy' ? ' selected' : '');
     $('btn-delay').className = 'btn-decision btn-delay' + (myDec === 'delay' ? ' selected' : '');
     $('btn-deploy').disabled = !!myDec; $('btn-delay').disabled = !!myDec;
   } else if (myDec) {
-    $('decision-row').style.display = 'grid';
+    $('decision-row').style.display = 'flex';
     $('btn-deploy').disabled = true; $('btn-delay').disabled = true;
   } else {
     $('decision-row').style.display = 'none';

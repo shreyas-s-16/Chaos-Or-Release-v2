@@ -1185,14 +1185,17 @@ a {
 
 .playcard-name {
   font-family: var(--font-display);
-  font-size: clamp(9px, 2vw, 13px);
+  font-size: clamp(7px, 1.6vw, 11px);
   font-weight: 900;
   color: var(--card-label);
   text-align: center;
-  letter-spacing: 1px;
+  letter-spacing: 0.5px;
   text-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
   line-height: 1.1;
-  word-break: break-word;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  width: 100%;
 }
 
 .playcard-desc {
