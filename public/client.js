@@ -460,9 +460,14 @@ socket.on('gameState', data => {
 
   // Phase change sounds + animations
   if (prevPhase !== L.gameState.phase) {
-    // Reset revealedAnswer when a new round starts
+    // Reset revealedAnswer + decoder input when a new round starts
     if (L.gameState.phase === 'LOBBY' || L.gameState.phase === 'BRIEFING') {
       L.revealedAnswer = null;
+      // Clear decoder box so it doesn't carry over between rounds
+      const decoderInput = $('decoder-text');
+      if (decoderInput) { decoderInput.value = ''; decoderInput.disabled = false; }
+      const decoderFb = $('decoder-feedback');
+      if (decoderFb) { decoderFb.textContent = ''; decoderFb.className = ''; }
     }
     handlePhaseChange(prevPhase, L.gameState.phase);
   }
@@ -816,41 +821,79 @@ function renderTeam() {
 function renderCards(team, phase) {
   const c = team.cards || { rollback: true, freeze: true, doublerisk: true };
   const inSab = phase === 'SABOTAGE_PULSE';
-  const inBreach = phase === 'BREACH';
-  const canUseCards = inSab || inBreach;
+  const canUseCards = inSab;
 
   const note = $('cards-phase-note');
   if (note) {
     if (inSab) { note.textContent = '⚠ SABOTAGE PULSE ACTIVE — Use cards now!'; note.style.color = 'var(--red)'; note.style.borderColor = 'rgba(229,52,26,0.3)'; }
-    else if (inBreach) { note.textContent = 'Cards available during Sabotage Pulse (last 15s)'; note.style.color = 'var(--muted)'; note.style.borderColor = ''; }
+    else if (phase === 'BREACH') { note.textContent = 'Cards available during Sabotage Pulse (last 15s)'; note.style.color = 'var(--muted)'; note.style.borderColor = ''; }
     else { note.textContent = 'Cards unlock during Sabotage Pulse'; note.style.color = 'var(--dim)'; note.style.borderColor = ''; }
   }
 
+  // Playing card definitions — colours match the photo reference
   const cards = [
-    { key: 'freeze', name: '❄ FREEZE', desc: 'Lock a team out next round', color: 'var(--blue)' },
-    { key: 'doublerisk', name: '⚡ DOUBLE RISK', desc: 'Target takes -8 if wrong', color: 'var(--red)' },
-    { key: 'rollback', name: '⏪ ROLLBACK', desc: 'Reduce penalty to -2', color: 'var(--green)' },
+    {
+      key: 'freeze',
+      name: 'FREEZE',
+      icon: `<svg viewBox="0 0 60 70" width="54" height="63"><rect x="4" y="8" width="52" height="14" rx="5" fill="rgba(255,255,255,0.25)"/><rect x="22" y="8" width="16" height="54" rx="5" fill="rgba(255,255,255,0.25)"/><ellipse cx="30" cy="30" rx="14" ry="10" fill="rgba(255,255,255,0.35)"/><ellipse cx="30" cy="24" rx="10" ry="7" fill="rgba(200,235,255,0.55)"/><ellipse cx="30" cy="20" rx="7" ry="5" fill="rgba(220,245,255,0.7)"/><ellipse cx="30" cy="17" rx="4" ry="3" fill="rgba(255,255,255,0.9)"/></svg>`,
+      bg: 'linear-gradient(145deg, #2196f3 0%, #0d6efd 60%, #0a4fc4 100%)',
+      border: '#90caf9',
+      labelColor: '#fff',
+      cornerColor: '#bbdefb',
+      desc: 'Lock a team out next round',
+    },
+    {
+      key: 'doublerisk',
+      name: 'DOUBLE RISK',
+      icon: `<svg viewBox="0 0 60 60" width="52" height="52"><polygon points="30,4 56,52 4,52" fill="none" stroke="rgba(255,255,255,0.9)" stroke-width="4" stroke-linejoin="round"/><polygon points="30,4 56,52 4,52" fill="rgba(255,255,255,0.15)"/><rect x="27" y="20" width="6" height="18" rx="3" fill="#fff"/><rect x="27" y="42" width="6" height="6" rx="3" fill="#fff"/></svg>`,
+      bg: 'linear-gradient(145deg, #f59e0b 0%, #d97706 60%, #b45309 100%)',
+      border: '#fde68a',
+      labelColor: '#fff',
+      cornerColor: '#fef3c7',
+      desc: 'Target gets -8 if wrong',
+    },
+    {
+      key: 'rollback',
+      name: 'ROLLBACK',
+      icon: `<svg viewBox="0 0 60 60" width="52" height="52"><path d="M30 10 A20 20 0 1 0 50 30" fill="none" stroke="rgba(255,255,255,0.9)" stroke-width="5" stroke-linecap="round"/><polygon points="46,18 54,30 38,30" fill="rgba(255,255,255,0.9)"/></svg>`,
+      bg: 'linear-gradient(145deg, #7c3aed 0%, #6d28d9 60%, #4c1d95 100%)',
+      border: '#c4b5fd',
+      labelColor: '#fff',
+      cornerColor: '#ede9fe',
+      desc: 'Reduce penalty to −2',
+    },
   ];
+
   let unused = 0;
-  const circuitSvg = {
-    freeze: `<svg viewBox="0 0 40 40" style="position:absolute;inset:0;width:100%;height:100%;opacity:0.2"><line x1="20" y1="4" x2="20" y2="36" stroke="#7dd3fc" stroke-width="1"/><line x1="6" y1="12" x2="34" y2="28" stroke="#7dd3fc" stroke-width="1"/><line x1="34" y1="12" x2="6" y2="28" stroke="#7dd3fc" stroke-width="1"/><circle cx="20" cy="4" r="1.5" fill="#7dd3fc"/><circle cx="20" cy="36" r="1.5" fill="#7dd3fc"/></svg>`,
-    doublerisk: `<svg viewBox="0 0 40 40" style="position:absolute;inset:0;width:100%;height:100%;opacity:0.2"><polyline points="24,4 16,20 22,20 14,36" fill="none" stroke="#f59e0b" stroke-width="1.5" stroke-linejoin="round"/></svg>`,
-    rollback: `<svg viewBox="0 0 40 40" style="position:absolute;inset:0;width:100%;height:100%;opacity:0.2"><path d="M20 8 A12 12 0 1 0 32 20" fill="none" stroke="#a855f7" stroke-width="1.5" stroke-linecap="round"/><polyline points="28,12 32,20 24,21" fill="none" stroke="#a855f7" stroke-width="1.5" stroke-linejoin="round"/></svg>`,
-  };
   $('team-cards-list').innerHTML = cards.map(card => {
     const avail = c[card.key] !== false;
     if (avail) unused++;
-    const canUse = avail && canUseCards && card.key !== 'rollback';
-    const glowStyle = canUse && card.key === 'freeze' ? 'box-shadow:0 0 20px rgba(125,211,252,0.4);'
-      : canUse && card.key === 'doublerisk' ? 'box-shadow:0 0 20px rgba(245,158,11,0.4);' : '';
-    return `<div class="card-item ${card.key} ${avail ? '' : 'used'}" style="${glowStyle}">
-      ${circuitSvg[card.key] || ''}
-      <div class="card-inner">
-        <div>
-          <div class="card-name">${card.name}</div>
-          <div class="card-desc">${avail ? card.desc : '— USED —'}</div>
+    const canUse = avail && canUseCards;
+
+    // Playing card HTML — ratio ~63:88 (standard card)
+    return `<div class="playcard-wrap ${card.key} ${avail ? '' : 'playcard-used'}" style="
+        --card-border: ${card.border};
+        --card-bg: ${card.bg};
+        --card-label: ${card.labelColor};
+        --card-corner: ${card.cornerColor};
+      " onclick="${canUse ? `openCardModal('${card.key}')` : ''}">
+      <div class="playcard">
+        <!-- corner top-left -->
+        <div class="playcard-corner playcard-corner-tl">
+          <div class="playcard-corner-icon">${card.key === 'freeze' ? '❄' : card.key === 'doublerisk' ? '⚡' : '↺'}</div>
         </div>
-        ${canUse ? `<button class="btn-use-card" onclick="openCardModal('${card.key}')">USE</button>` : ''}
+        <!-- center content -->
+        <div class="playcard-center">
+          ${card.icon}
+          <div class="playcard-name">${card.name}</div>
+          <div class="playcard-desc">${avail ? card.desc : '— USED —'}</div>
+        </div>
+        <!-- corner bottom-right (rotated) -->
+        <div class="playcard-corner playcard-corner-br">
+          <div class="playcard-corner-icon">${card.key === 'freeze' ? '❄' : card.key === 'doublerisk' ? '⚡' : '↺'}</div>
+        </div>
+        ${canUse ? '<div class="playcard-use-badge">TAP TO USE</div>' : ''}
+        ${!avail ? '<div class="playcard-used-overlay">USED</div>' : ''}
       </div>
     </div>`;
   }).join('');
@@ -1548,54 +1591,71 @@ function disableCopyPaste() {
 //  END SCREEN
 // ═══════════════════════════════════════════════════════
 function showEndScreen() {
-  // Show end screen for all roles
+  if (L.isAdmin) {
+    // Admin stays on their dashboard — just show a toast notification
+    if (L.screen !== 'admin') setScreen('admin-screen');
+    renderAdmin();
+    const toast = document.createElement('div');
+    toast.style.cssText = 'position:fixed;top:20px;left:50%;transform:translateX(-50%);background:#e5341a;color:#fff;font-family:var(--font-mono);font-size:13px;padding:10px 24px;border-radius:4px;z-index:9999;letter-spacing:2px;box-shadow:0 4px 20px rgba(0,0,0,0.5)';
+    toast.textContent = '\uD83C\uDFC1 GAME OVER \u2014 Hoarding penalties applied';
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 5000);
+    return;
+  }
   setScreen('end-screen');
   renderEndScreen();
 }
 
 function renderEndScreen() {
   const teams = Object.values(L.teams).sort((a, b) => (b.score || 0) - (a.score || 0));
+  const isTeam = !!L.teamName;
 
-  // Podium — top 3
-  const medals = ['🥇', '🥈', '🥉'];
-  const podiumHeights = ['120px', '90px', '70px'];
-  const podiumColors = ['var(--amber)', '#aaa', '#cd7f32'];
+  // ── PODIUM (projector + team) ──
   const podiumEl = $('end-podium');
   if (podiumEl) {
-    // Reorder for visual podium: 2nd, 1st, 3rd
+    const medals = ['\uD83E\uDD47', '\uD83E\uDD48', '\uD83E\uDD49'];
+    const podiumHeights = ['160px', '120px', '90px'];
+    const podiumColors = ['#f59e0b', '#94a3b8', '#cd7f32'];
     const top3 = [teams[1], teams[0], teams[2]].filter(Boolean);
-    const top3Heights = [podiumHeights[1], podiumHeights[0], podiumHeights[2]];
-    const top3Colors = [podiumColors[1], podiumColors[0], podiumColors[2]];
-    const top3Medals = [medals[1], medals[0], medals[2]];
+    const rh = [podiumHeights[1], podiumHeights[0], podiumHeights[2]];
+    const rc = [podiumColors[1], podiumColors[0], podiumColors[2]];
+    const rm = [medals[1], medals[0], medals[2]];
+    const nameSize = isTeam ? '14px' : '22px';
+    const scoreSize = isTeam ? '18px' : '28px';
+    const medalSize = isTeam ? '28px' : '44px';
     podiumEl.innerHTML = top3.map((t, i) => `
-      <div style="display:flex;flex-direction:column;align-items:center;gap:8px;">
-        <div style="font-size:28px;">${top3Medals[i]}</div>
-        <div style="font-family:var(--font-mono);font-size:13px;color:${top3Colors[i]};font-weight:700;text-align:center;max-width:100px;">${t.name}</div>
-        <div style="font-family:var(--font-mono);font-size:18px;color:${top3Colors[i]};font-weight:700;">${(t.score || 0) >= 0 ? '+' : ''}${t.score || 0}</div>
-        <div style="width:80px;height:${top3Heights[i]};background:${top3Colors[i]};opacity:0.3;border-radius:4px 4px 0 0;"></div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:${isTeam ? '6px' : '10px'};">
+        <div style="font-size:${medalSize}">${rm[i]}</div>
+        <div style="font-family:var(--font-display);font-size:${nameSize};color:${rc[i]};font-weight:700;text-align:center;max-width:${isTeam ? '90px' : '160px'};letter-spacing:2px;">${t.name}</div>
+        <div style="font-family:var(--font-mono);font-size:${scoreSize};color:${rc[i]};font-weight:700;">${(t.score || 0) >= 0 ? '+' : ''}${t.score || 0}</div>
+        <div style="width:${isTeam ? '70px' : '100px'};height:${rh[i]};background:${rc[i]};opacity:0.35;border-radius:6px 6px 0 0;"></div>
       </div>`).join('');
   }
 
-  // Full leaderboard
+  // ── FULL LEADERBOARD ──
   const lbEl = $('end-leaderboard');
   if (lbEl) {
+    const myName = L.teamName;
     lbEl.innerHTML = teams.map((t, i) => {
+      const isMe = t.name === myName;
       const hoardingPenalty = (t.history || []).find(h => h.decision === 'hoarding');
       const penaltyNote = hoardingPenalty ? ` <span style="color:var(--red);font-size:10px">(${hoardingPenalty.pts} card penalty)</span>` : '';
-      return `<div style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:var(--surface);border:0.5px solid var(--border-hi);border-radius:4px;">
-        <div style="font-family:var(--font-mono);font-size:18px;color:var(--muted);width:28px;text-align:center;">${i + 1}</div>
+      return `<div style="display:flex;align-items:center;gap:12px;padding:${isMe ? '14px' : '10px'} 14px;
+        background:${isMe ? 'rgba(40,200,64,0.12)' : 'var(--surface)'};
+        border:${isMe ? '1.5px solid var(--green)' : '0.5px solid var(--border-hi)'};
+        border-radius:4px;${isMe ? 'box-shadow:0 0 16px rgba(40,200,64,0.2);' : ''}">
+        <div style="font-family:var(--font-mono);font-size:${isMe ? '22px' : '16px'};color:${isMe ? 'var(--green)' : 'var(--muted)'};width:32px;text-align:center;font-weight:700;">${i + 1}</div>
         <div style="flex:1;">
-          <div style="font-family:var(--font-mono);font-size:14px;color:var(--fg);">${t.name}${penaltyNote}</div>
-          <div style="font-size:10px;color:var(--dim);">${t.online ? '● online' : '○ offline'}</div>
+          <div style="font-family:var(--font-mono);font-size:${isMe ? '16px' : '13px'};color:${isMe ? '#fff' : 'var(--fg)'};font-weight:${isMe ? '700' : '400'};">${t.name}${isMe ? ' \u2190 YOU' : ''}${penaltyNote}</div>
         </div>
-        <div style="font-family:var(--font-mono);font-size:20px;font-weight:700;color:${(t.score || 0) >= 0 ? 'var(--green)' : 'var(--red)'};">
+        <div style="font-family:var(--font-mono);font-size:${isMe ? '24px' : '18px'};font-weight:700;color:${(t.score || 0) >= 0 ? 'var(--green)' : 'var(--red)'};">
           ${(t.score || 0) >= 0 ? '+' : ''}${t.score || 0}
         </div>
       </div>`;
     }).join('');
   }
 
-  // Show reset button for admin
+  // Show reset button only for admin (won't appear since admin stays on admin screen, but safety)
   const adminBtns = $('end-admin-btns');
   if (adminBtns) adminBtns.style.display = L.isAdmin ? 'block' : 'none';
 }
@@ -1609,27 +1669,28 @@ function confirmReset() {
 }
 
 
-initParticles();
-disableCopyPaste();
-const overlay = document.getElementById('connecting-overlay');
+function boot() {
+  initParticles();
+  disableCopyPaste();
+  const overlay = document.getElementById('connecting-overlay');
 
-function onConnected() {
-  setTimeout(() => {
-    if (overlay) { overlay.classList.add('hidden'); setTimeout(() => { if (overlay) overlay.style.display = 'none'; }, 600); }
-    // Only navigate to login if there is no active session.
-    // If the player was already logged in (session restored from sessionStorage),
-    // their screen state is already correct — don't overwrite it.
-    if (!L.teamName && !L.isAdmin) {
-      setScreen('login-screen');
-    } else {
-      // Restore the correct screen without triggering a navigation side-effect
-      const targetScreen = L.isAdmin ? 'admin-screen' : (L.screen ? L.screen + '-screen' : 'team-screen');
-      setScreen(targetScreen);
-    }
-  }, 800);
+  function onConnected() {
+    setTimeout(() => {
+      if (overlay) { overlay.classList.add('hidden'); setTimeout(() => { if (overlay) overlay.style.display = 'none'; }, 600); }
+      // Only navigate to login if there is no active session.
+      // If the player was already logged in (session restored from sessionStorage),
+      // their screen state is already correct — don't overwrite it.
+      if (!L.teamName && !L.isAdmin) {
+        setScreen('login-screen');
+      } else {
+        // Restore the correct screen without triggering a navigation side-effect
+        const targetScreen = L.isAdmin ? 'admin-screen' : (L.screen ? L.screen + '-screen' : 'team-screen');
+        setScreen(targetScreen);
+      }
+    }, 800);
+  }
+
+  socket.on('connect', onConnected);
+  if (socket.connected) onConnected();
 }
-
-socket.on('connect', onConnected);
-if (socket.connected) onConnected();
-
 document.addEventListener('DOMContentLoaded', boot);

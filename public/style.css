@@ -1100,97 +1100,177 @@ a {
   gap: 12px;
 }
 
-.card-item {
-  position: relative;
+/* ═══════════════════════════════════════════
+   PLAYING CARDS — power cards styled as real cards
+   Ratio: 63×88 (standard playing card 2.5:3.5in)
+   ═══════════════════════════════════════════ */
+#team-cards-list {
+  display: flex;
+  flex-direction: row;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: nowrap;
+}
+
+.playcard-wrap {
+  flex: 1;
+  max-width: 130px;
+  min-width: 90px;
+  cursor: default;
+  transition: transform 0.25s cubic-bezier(.34, 1.56, .64, 1), filter 0.2s;
+  filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.55));
+}
+
+.playcard-wrap:not(.playcard-used) {
+  cursor: pointer;
+}
+
+.playcard-wrap:not(.playcard-used):hover {
+  transform: translateY(-14px) rotate(-2deg) scale(1.05);
+  filter: drop-shadow(0 22px 28px rgba(0, 0, 0, 0.7));
+}
+
+.playcard-wrap:not(.playcard-used):active {
+  transform: translateY(-6px) scale(0.97);
+}
+
+.playcard-wrap.playcard-used {
+  opacity: 0.28;
+  filter: grayscale(0.7) drop-shadow(0 2px 6px rgba(0, 0, 0, 0.3));
+  transform: rotate(-4deg);
+}
+
+.playcard {
+  width: 100%;
+  aspect-ratio: 63 / 88;
+  background: var(--card-bg);
+  border: 2.5px solid var(--card-border);
   border-radius: 12px;
-  overflow: hidden;
-  transition: transform 0.2s cubic-bezier(.34, 1.56, .64, 1), box-shadow 0.2s;
+  position: relative;
   display: flex;
   flex-direction: column;
-}
-
-.card-item:not(.used):hover {
-  transform: translateY(-5px);
-}
-
-.card-item .card-inner {
-  padding: 12px 14px;
-  display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
+  overflow: hidden;
+  padding: 8px 6px;
+  box-shadow: inset 0 0 30px rgba(255, 255, 255, 0.08);
+}
+
+/* Sheen overlay */
+.playcard::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.18) 0%, transparent 55%);
+  border-radius: 10px;
+  pointer-events: none;
+}
+
+/* Corner pips */
+.playcard-corner {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1;
+}
+
+.playcard-corner-tl {
+  top: 6px;
+  left: 7px;
+}
+
+.playcard-corner-br {
+  bottom: 6px;
+  right: 7px;
+  transform: rotate(180deg);
+}
+
+.playcard-corner-icon {
+  font-size: 11px;
+  color: var(--card-corner);
+  opacity: 0.9;
+}
+
+/* Center */
+.playcard-center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   position: relative;
   z-index: 1;
+  padding: 0 4px;
+  width: 100%;
 }
 
-.card-item.freeze {
-  background: #040d13;
-  border: 1.5px solid #7dd3fc;
-  box-shadow: 0 0 16px rgba(125, 211, 252, 0.2);
+.playcard-name {
+  font-family: var(--font-display);
+  font-size: clamp(11px, 2.5vw, 16px);
+  font-weight: 900;
+  color: var(--card-label);
+  text-align: center;
+  letter-spacing: 1.5px;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+  line-height: 1.1;
 }
 
-.card-item.doublerisk {
-  background: #110a00;
-  border: 1.5px solid #f59e0b;
-  box-shadow: 0 0 16px rgba(245, 158, 11, 0.2);
-}
-
-.card-item.rollback {
-  background: #0d0516;
-  border: 1.5px solid #a855f7;
-  box-shadow: 0 0 16px rgba(168, 85, 247, 0.2);
-}
-
-.card-item.used {
-  opacity: 0.22;
-  transform: none !important;
-  box-shadow: none;
-  filter: grayscale(0.8);
-}
-
-.card-item.freeze .card-name {
-  color: #bae6fd;
-}
-
-.card-item.doublerisk .card-name {
-  color: #fcd34d;
-}
-
-.card-item.rollback .card-name {
-  color: #c084fc;
-}
-
-.card-name {
+.playcard-desc {
   font-family: var(--font-mono);
-  font-weight: 700;
-  font-size: 13px;
+  font-size: clamp(8px, 1.5vw, 10px);
+  color: var(--card-label);
+  opacity: 0.75;
+  text-align: center;
+  line-height: 1.3;
 }
 
-.card-desc {
-  font-size: 10px;
-  color: var(--muted);
-  margin-top: 3px;
-}
-
-.btn-use-card {
-  background: transparent;
-  border: 1.5px solid var(--amber);
-  color: var(--amber);
-  border-radius: 8px;
-  padding: 5px 12px;
+/* "TAP TO USE" badge — glows when usable */
+.playcard-use-badge {
+  position: absolute;
+  bottom: 22px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 20px;
   font-family: var(--font-mono);
-  font-size: 10px;
-  font-weight: 700;
-  cursor: pointer;
+  font-size: 7px;
+  color: #fff;
   letter-spacing: 1px;
-  transition: all 0.15s;
+  padding: 2px 7px;
   white-space: nowrap;
-  box-shadow: 0 0 8px rgba(245, 158, 11, 0.2);
+  animation: pulse-badge 1.4s ease-in-out infinite;
+  z-index: 2;
 }
 
-.btn-use-card:hover {
-  background: rgba(245, 158, 11, 0.15);
-  box-shadow: 0 0 16px rgba(245, 158, 11, 0.4);
-  transform: scale(1.06);
+@keyframes pulse-badge {
+
+  0%,
+  100% {
+    opacity: 0.7;
+  }
+
+  50% {
+    opacity: 1;
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+  }
+}
+
+/* "USED" overlay */
+.playcard-used-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-display);
+  font-size: 20px;
+  letter-spacing: 4px;
+  color: rgba(255, 255, 255, 0.25);
+  transform: rotate(-20deg);
+  pointer-events: none;
+  z-index: 3;
 }
 
 .unused-warning {
