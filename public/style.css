@@ -592,6 +592,7 @@ a {
   flex-direction: column;
   gap: 16px;
   overflow-y: auto;
+  overflow-x: visible;
 }
 
 /* Status banners */
@@ -898,10 +899,13 @@ a {
    CIRCUIT BOARD PLAYING CARDS
    ═══════════════════════════════════════════ */
 .decision-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
   gap: 20px;
   margin-top: 12px;
+  padding: 8px 0 20px 0;
+  overflow: visible;
 }
 
 .btn-decision {
@@ -911,8 +915,10 @@ a {
   outline: none;
   background: transparent;
   padding: 0;
+  flex: 1;
+  max-width: 160px;
   transition: transform 0.2s cubic-bezier(.34, 1.56, .64, 1), filter 0.2s;
-  filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.5));
+  filter: drop-shadow(0 6px 16px rgba(0, 0, 0, 0.6));
 }
 
 .btn-decision:hover:not(:disabled) {
@@ -933,140 +939,109 @@ a {
 
 .card-face {
   width: 100%;
-  min-height: 180px;
-  border-radius: 14px;
-  border: 2px solid;
+  aspect-ratio: 63 / 88;
+  border-radius: 16px;
+  border: 3px solid rgba(255, 255, 255, 0.25);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  padding: 20px 12px 16px;
+  gap: 8px;
+  padding: 18px 10px 14px;
   position: relative;
   overflow: hidden;
-  font-family: var(--font-mono);
   transition: box-shadow 0.2s;
 }
 
-.card-face .circuit-bg {
+/* Sheen on card face */
+.card-face::before {
+  content: '';
   position: absolute;
   inset: 0;
-  width: 100%;
-  height: 100%;
-  opacity: 0.35;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.22) 0%, transparent 50%);
+  border-radius: 14px;
   pointer-events: none;
+  z-index: 0;
 }
 
 .card-face .cn {
   position: absolute;
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: 1px;
-  opacity: 0.55;
-  font-family: var(--font-mono);
+  font-size: 16px;
   line-height: 1;
-}
-
-.card-face .cn-tl {
-  top: 8px;
-  left: 10px;
-}
-
-.card-face .cn-br {
-  bottom: 8px;
-  right: 10px;
-  transform: rotate(180deg);
-}
-
-.card-face::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: 12px;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, transparent 50%);
-  opacity: 0;
-  transition: opacity 0.2s;
-  pointer-events: none;
-}
-
-.btn-decision:hover:not(:disabled) .card-face::after {
-  opacity: 1;
-}
-
-.dec-icon {
-  font-size: 40px;
-  line-height: 1;
-  position: relative;
   z-index: 1;
 }
 
+.card-face .cn-tl {
+  top: 10px;
+  left: 12px;
+}
+
+.card-face .cn-br {
+  bottom: 10px;
+  right: 12px;
+}
+
+.dec-icon {
+  font-size: 52px;
+  line-height: 1;
+  position: relative;
+  z-index: 1;
+  filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.4));
+}
+
 .dec-pts {
-  font-size: 26px;
+  font-size: 22px;
   font-weight: 900;
   letter-spacing: 1px;
   position: relative;
   z-index: 1;
   line-height: 1;
+  color: #fff;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
 }
 
 .dec-label {
   font-family: var(--font-display);
-  font-size: 28px;
-  letter-spacing: 4px;
-  font-weight: 700;
+  font-size: clamp(22px, 4vw, 32px);
+  letter-spacing: 3px;
+  font-weight: 900;
   position: relative;
   z-index: 1;
+  color: #fff;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
 }
 
 .dec-hint {
   font-size: 9px;
-  opacity: 0.55;
+  color: rgba(255, 255, 255, 0.7);
   letter-spacing: 2px;
   text-transform: uppercase;
   position: relative;
   z-index: 1;
 }
 
+/* DEPLOY — solid green like the reference card */
 .btn-deploy .card-face {
-  background: #050c1a;
-  border-color: #1a6fff;
-  box-shadow: 0 0 25px rgba(26, 111, 255, 0.35), inset 0 0 30px rgba(26, 111, 255, 0.05);
+  background: linear-gradient(160deg, #2ecc40 0%, #1db932 50%, #16a32a 100%);
+  border-color: rgba(255, 255, 255, 0.3);
+  box-shadow: 0 8px 24px rgba(29, 185, 50, 0.5);
 }
 
 .btn-deploy.selected .card-face {
-  box-shadow: 0 0 50px rgba(26, 111, 255, 0.7), inset 0 0 40px rgba(26, 111, 255, 0.12);
-  border-color: #4af;
+  box-shadow: 0 0 40px rgba(29, 185, 50, 0.9), 0 8px 24px rgba(29, 185, 50, 0.5);
+  border-color: rgba(255, 255, 255, 0.6);
 }
 
-.btn-deploy .dec-pts {
-  color: #4af;
-  text-shadow: 0 0 12px #4af;
-}
-
-.btn-deploy .dec-label {
-  color: #4af;
-  text-shadow: 0 0 10px rgba(68, 170, 255, 0.6);
-}
-
+/* DELAY — solid red like the reference card */
 .btn-delay .card-face {
-  background: #030f06;
-  border-color: #00e676;
-  box-shadow: 0 0 25px rgba(0, 230, 118, 0.35), inset 0 0 30px rgba(0, 230, 118, 0.05);
+  background: linear-gradient(160deg, #e74c3c 0%, #c0392b 50%, #a93226 100%);
+  border-color: rgba(255, 255, 255, 0.3);
+  box-shadow: 0 8px 24px rgba(231, 76, 60, 0.5);
 }
 
 .btn-delay.selected .card-face {
-  box-shadow: 0 0 50px rgba(0, 230, 118, 0.7), inset 0 0 40px rgba(0, 230, 118, 0.12);
-  border-color: #0f0;
-}
-
-.btn-delay .dec-pts {
-  color: #0f0;
-  text-shadow: 0 0 12px #0f0;
-}
-
-.btn-delay .dec-label {
-  color: #0f0;
-  text-shadow: 0 0 10px rgba(0, 255, 0, 0.6);
+  box-shadow: 0 0 40px rgba(231, 76, 60, 0.9), 0 8px 24px rgba(231, 76, 60, 0.5);
+  border-color: rgba(255, 255, 255, 0.6);
 }
 
 .btn-rollback {
@@ -1107,18 +1082,21 @@ a {
 #team-cards-list {
   display: flex;
   flex-direction: row;
-  gap: 12px;
+  gap: 10px;
   justify-content: center;
   flex-wrap: nowrap;
+  padding: 8px 4px 16px 4px;
+  /* bottom padding so drop-shadow isn't clipped */
+  overflow: visible;
 }
 
 .playcard-wrap {
   flex: 1;
-  max-width: 130px;
-  min-width: 90px;
+  max-width: 110px;
+  min-width: 76px;
   cursor: default;
   transition: transform 0.25s cubic-bezier(.34, 1.56, .64, 1), filter 0.2s;
-  filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.55));
+  filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.55));
 }
 
 .playcard-wrap:not(.playcard-used) {

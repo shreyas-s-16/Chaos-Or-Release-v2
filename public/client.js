@@ -868,7 +868,8 @@ function renderCards(team, phase) {
   $('team-cards-list').innerHTML = cards.map(card => {
     const avail = c[card.key] !== false;
     if (avail) unused++;
-    const canUse = avail && canUseCards;
+    // Rollback is only usable in AFTERMATH via its own dedicated button — never in Sabotage Pulse
+    const canUse = avail && canUseCards && card.key !== 'rollback';
 
     // Playing card HTML — ratio ~63:88 (standard card)
     return `<div class="playcard-wrap ${card.key} ${avail ? '' : 'playcard-used'}" style="
@@ -1268,10 +1269,12 @@ function openCardModal(cardType) {
   SFX.click();
   pendingCard = cardType;
   L.selectedTarget = null;
-  $('modal-title').textContent = cardType === 'freeze' ? '❄ FREEZE — Select Target' : '⚡ DOUBLE RISK — Select Target';
+  $('modal-title').textContent = cardType === 'freeze' ? '❄ FREEZE — Select Target' : cardType === 'doublerisk' ? '⚡ DOUBLE RISK — Select Target' : '— Select Target';
   $('modal-sub').textContent = cardType === 'freeze'
     ? 'Target team is locked out of the entire next round.'
-    : 'If target answers wrong, they lose −8 pts instead of −5.';
+    : cardType === 'doublerisk'
+      ? 'If target answers wrong, they lose −8 pts instead of −5.'
+      : '';
 
   // Build 55-cell targeting grid
   const others = onlineTeams().filter(t => t.name !== L.teamName);
