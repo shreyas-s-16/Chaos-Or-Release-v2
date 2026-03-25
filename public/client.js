@@ -438,6 +438,21 @@ socket.on('connect', () => {
         setScreen('login-screen');
       }
     });
+  } else if (L.isAdmin) {
+    // Admin socket role lives in server memory — re-auth silently on reconnect
+    // using the stored session. We re-prompt for password to re-establish role.
+    const savedPass = sessionStorage.getItem('cor_admin_pass');
+    if (savedPass) {
+      socket.emit('adminAuth', { pass: savedPass }, res => {
+        if (!res || !res.ok) {
+          // Password no longer valid — clear admin session
+          clearSession();
+          sessionStorage.removeItem('cor_admin_pass');
+          L.isAdmin = false;
+          setScreen('login-screen');
+        }
+      });
+    }
   }
 });
 socket.on('disconnect', () => { setConnIndicators(false); });
@@ -726,6 +741,7 @@ function logout() {
   socket.emit('logout');
   L.teamName = null; L.isAdmin = false;
   clearSession();
+  sessionStorage.removeItem('cor_admin_pass');
   document.body.classList.remove('sabotage-pulse');
   showLogin();
 }
@@ -736,7 +752,10 @@ function logout() {
 function promptAdmin() {
   const p = prompt('Enter Admin password:'); if (!p) return;
   socket.emit('adminAuth', { pass: p }, res => {
-    if (res.ok) showAdmin(); else alert('Wrong password.');
+    if (res.ok) {
+      sessionStorage.setItem('cor_admin_pass', p);
+      showAdmin();
+    } else alert('Wrong password.');
   });
 }
 function promptProjector() {
