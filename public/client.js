@@ -1595,7 +1595,6 @@ function disableCopyPaste() {
 // ═══════════════════════════════════════════════════════
 function showEndScreen() {
   if (L.isAdmin) {
-    // Admin stays on their dashboard — just show a toast notification
     if (L.screen !== 'admin') setScreen('admin-screen');
     renderAdmin();
     const toast = document.createElement('div');
@@ -1605,60 +1604,73 @@ function showEndScreen() {
     setTimeout(() => toast.remove(), 5000);
     return;
   }
+  const endEl = $('end-screen');
+  if (endEl) {
+    // Add projector-end class for larger layout on projector
+    if (!L.teamName) endEl.classList.add('projector-end');
+    else endEl.classList.remove('projector-end');
+  }
   setScreen('end-screen');
   renderEndScreen();
 }
 
 function renderEndScreen() {
   const teams = Object.values(L.teams).sort((a, b) => (b.score || 0) - (a.score || 0));
-  const isTeam = !!L.teamName;
+  const isProjector = !L.teamName && !L.isAdmin;
+  const myName = L.teamName;
 
-  // ── PODIUM (projector + team) ──
+  // ── PODIUM ──
   const podiumEl = $('end-podium');
   if (podiumEl) {
     const medals = ['\uD83E\uDD47', '\uD83E\uDD48', '\uD83E\uDD49'];
-    const podiumHeights = ['160px', '120px', '90px'];
-    const podiumColors = ['#f59e0b', '#94a3b8', '#cd7f32'];
-    const top3 = [teams[1], teams[0], teams[2]].filter(Boolean);
-    const rh = [podiumHeights[1], podiumHeights[0], podiumHeights[2]];
-    const rc = [podiumColors[1], podiumColors[0], podiumColors[2]];
-    const rm = [medals[1], medals[0], medals[2]];
-    const nameSize = isTeam ? '14px' : '22px';
-    const scoreSize = isTeam ? '18px' : '28px';
-    const medalSize = isTeam ? '28px' : '44px';
-    podiumEl.innerHTML = top3.map((t, i) => `
-      <div style="display:flex;flex-direction:column;align-items:center;gap:${isTeam ? '6px' : '10px'};">
-        <div style="font-size:${medalSize}">${rm[i]}</div>
-        <div style="font-family:var(--font-display);font-size:${nameSize};color:${rc[i]};font-weight:700;text-align:center;max-width:${isTeam ? '90px' : '160px'};letter-spacing:2px;">${t.name}</div>
-        <div style="font-family:var(--font-mono);font-size:${scoreSize};color:${rc[i]};font-weight:700;">${(t.score || 0) >= 0 ? '+' : ''}${t.score || 0}</div>
-        <div style="width:${isTeam ? '70px' : '100px'};height:${rh[i]};background:${rc[i]};opacity:0.35;border-radius:6px 6px 0 0;"></div>
-      </div>`).join('');
+    // Visual order: 2nd | 1st | 3rd
+    const order = [1, 0, 2];
+    const heights = isProjector ? ['130px', '190px', '100px'] : ['90px', '130px', '70px'];
+    const colors = ['#94a3b8', '#f59e0b', '#cd7f32'];
+    const nameSize = isProjector ? '20px' : '13px';
+    const scoreSize = isProjector ? '26px' : '17px';
+    const medalSize = isProjector ? '42px' : '26px';
+    const barWidth = isProjector ? '110px' : '72px';
+    podiumEl.innerHTML = order.map((rank, slot) => {
+      const t = teams[rank];
+      if (!t) return '';
+      return `<div style="display:flex;flex-direction:column;align-items:center;gap:6px;">
+        <div style="font-size:${medalSize}">${medals[rank]}</div>
+        <div style="font-family:var(--font-display);font-size:${nameSize};color:${colors[slot]};font-weight:700;text-align:center;max-width:${barWidth};letter-spacing:1.5px;word-break:break-word;">${t.name}</div>
+        <div style="font-family:var(--font-mono);font-size:${scoreSize};color:${colors[slot]};font-weight:700;">${(t.score || 0) >= 0 ? '+' : ''}${t.score || 0}</div>
+        <div style="width:${barWidth};height:${heights[slot]};background:${colors[slot]};opacity:0.4;border-radius:6px 6px 0 0;"></div>
+      </div>`;
+    }).join('');
   }
 
-  // ── FULL LEADERBOARD ──
+  // ── LEADERBOARD ──
   const lbEl = $('end-leaderboard');
   if (lbEl) {
-    const myName = L.teamName;
     lbEl.innerHTML = teams.map((t, i) => {
       const isMe = t.name === myName;
-      const hoardingPenalty = (t.history || []).find(h => h.decision === 'hoarding');
-      const penaltyNote = hoardingPenalty ? ` <span style="color:var(--red);font-size:10px">(${hoardingPenalty.pts} card penalty)</span>` : '';
-      return `<div style="display:flex;align-items:center;gap:12px;padding:${isMe ? '14px' : '10px'} 14px;
+      const penalty = (t.history || []).find(h => h.decision === 'hoarding');
+      const penNote = penalty ? ` <span style="color:var(--red);font-size:10px">(${penalty.pts} card penalty)</span>` : '';
+      const rankColor = i === 0 ? '#f59e0b' : i === 1 ? '#94a3b8' : i === 2 ? '#cd7f32' : 'var(--muted)';
+      // Projector: larger rows; Team: highlight own row
+      const rowPad = isProjector ? '14px 20px' : isMe ? '14px 14px' : '10px 14px';
+      const rankSize = isProjector ? '24px' : isMe ? '22px' : '16px';
+      const nameSize = isProjector ? '18px' : isMe ? '16px' : '13px';
+      const scoreSize = isProjector ? '28px' : isMe ? '24px' : '18px';
+      return `<div class="${isMe ? 'end-my-row' : ''}" style="display:flex;align-items:center;gap:14px;padding:${rowPad};
         background:${isMe ? 'rgba(40,200,64,0.12)' : 'var(--surface)'};
-        border:${isMe ? '1.5px solid var(--green)' : '0.5px solid var(--border-hi)'};
-        border-radius:4px;${isMe ? 'box-shadow:0 0 16px rgba(40,200,64,0.2);' : ''}">
-        <div style="font-family:var(--font-mono);font-size:${isMe ? '22px' : '16px'};color:${isMe ? 'var(--green)' : 'var(--muted)'};width:32px;text-align:center;font-weight:700;">${i + 1}</div>
+        border:${isMe ? '2px solid var(--green)' : '0.5px solid var(--border-hi)'};
+        border-radius:6px;">
+        <div style="font-family:var(--font-mono);font-size:${rankSize};color:${isMe ? 'var(--green)' : rankColor};width:36px;text-align:center;font-weight:700;">${i + 1}</div>
         <div style="flex:1;">
-          <div style="font-family:var(--font-mono);font-size:${isMe ? '16px' : '13px'};color:${isMe ? '#fff' : 'var(--fg)'};font-weight:${isMe ? '700' : '400'};">${t.name}${isMe ? ' \u2190 YOU' : ''}${penaltyNote}</div>
+          <div style="font-family:var(--font-mono);font-size:${nameSize};color:${isMe ? '#fff' : 'var(--fg)'};font-weight:${isMe ? '700' : '400'};">${t.name}${isMe ? ' \u2190 YOU' : ''}${penNote}</div>
         </div>
-        <div style="font-family:var(--font-mono);font-size:${isMe ? '24px' : '18px'};font-weight:700;color:${(t.score || 0) >= 0 ? 'var(--green)' : 'var(--red)'};">
+        <div style="font-family:var(--font-mono);font-size:${scoreSize};font-weight:700;color:${(t.score || 0) >= 0 ? 'var(--green)' : 'var(--red)'};">
           ${(t.score || 0) >= 0 ? '+' : ''}${t.score || 0}
         </div>
       </div>`;
     }).join('');
   }
 
-  // Show reset button only for admin (won't appear since admin stays on admin screen, but safety)
   const adminBtns = $('end-admin-btns');
   if (adminBtns) adminBtns.style.display = L.isAdmin ? 'block' : 'none';
 }
