@@ -835,7 +835,7 @@ function renderCards(team, phase) {
     {
       key: 'freeze',
       name: 'FREEZE',
-      icon: `<svg viewBox="0 0 60 70" width="54" height="63"><rect x="4" y="8" width="52" height="14" rx="5" fill="rgba(255,255,255,0.25)"/><rect x="22" y="8" width="16" height="54" rx="5" fill="rgba(255,255,255,0.25)"/><ellipse cx="30" cy="30" rx="14" ry="10" fill="rgba(255,255,255,0.35)"/><ellipse cx="30" cy="24" rx="10" ry="7" fill="rgba(200,235,255,0.55)"/><ellipse cx="30" cy="20" rx="7" ry="5" fill="rgba(220,245,255,0.7)"/><ellipse cx="30" cy="17" rx="4" ry="3" fill="rgba(255,255,255,0.9)"/></svg>`,
+      icon: `<svg viewBox="0 0 60 70" width="38" height="44"><rect x="4" y="8" width="52" height="14" rx="5" fill="rgba(255,255,255,0.25)"/><rect x="22" y="8" width="16" height="54" rx="5" fill="rgba(255,255,255,0.25)"/><ellipse cx="30" cy="30" rx="14" ry="10" fill="rgba(255,255,255,0.35)"/><ellipse cx="30" cy="24" rx="10" ry="7" fill="rgba(200,235,255,0.55)"/><ellipse cx="30" cy="20" rx="7" ry="5" fill="rgba(220,245,255,0.7)"/><ellipse cx="30" cy="17" rx="4" ry="3" fill="rgba(255,255,255,0.9)"/></svg>`,
       bg: 'linear-gradient(145deg, #2196f3 0%, #0d6efd 60%, #0a4fc4 100%)',
       border: '#90caf9',
       labelColor: '#fff',
@@ -845,7 +845,7 @@ function renderCards(team, phase) {
     {
       key: 'doublerisk',
       name: 'DOUBLE RISK',
-      icon: `<svg viewBox="0 0 60 60" width="52" height="52"><polygon points="30,4 56,52 4,52" fill="none" stroke="rgba(255,255,255,0.9)" stroke-width="4" stroke-linejoin="round"/><polygon points="30,4 56,52 4,52" fill="rgba(255,255,255,0.15)"/><rect x="27" y="20" width="6" height="18" rx="3" fill="#fff"/><rect x="27" y="42" width="6" height="6" rx="3" fill="#fff"/></svg>`,
+      icon: `<svg viewBox="0 0 60 60" width="38" height="38"><polygon points="30,4 56,52 4,52" fill="none" stroke="rgba(255,255,255,0.9)" stroke-width="4" stroke-linejoin="round"/><polygon points="30,4 56,52 4,52" fill="rgba(255,255,255,0.15)"/><rect x="27" y="20" width="6" height="18" rx="3" fill="#fff"/><rect x="27" y="42" width="6" height="6" rx="3" fill="#fff"/></svg>`,
       bg: 'linear-gradient(145deg, #f59e0b 0%, #d97706 60%, #b45309 100%)',
       border: '#fde68a',
       labelColor: '#fff',
@@ -855,7 +855,7 @@ function renderCards(team, phase) {
     {
       key: 'rollback',
       name: 'ROLLBACK',
-      icon: `<svg viewBox="0 0 60 60" width="52" height="52"><path d="M30 10 A20 20 0 1 0 50 30" fill="none" stroke="rgba(255,255,255,0.9)" stroke-width="5" stroke-linecap="round"/><polygon points="46,18 54,30 38,30" fill="rgba(255,255,255,0.9)"/></svg>`,
+      icon: `<svg viewBox="0 0 60 60" width="38" height="38"><path d="M30 10 A20 20 0 1 0 50 30" fill="none" stroke="rgba(255,255,255,0.9)" stroke-width="5" stroke-linecap="round"/><polygon points="46,18 54,30 38,30" fill="rgba(255,255,255,0.9)"/></svg>`,
       bg: 'linear-gradient(145deg, #7c3aed 0%, #6d28d9 60%, #4c1d95 100%)',
       border: '#c4b5fd',
       labelColor: '#fff',
