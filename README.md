@@ -172,6 +172,8 @@ Shows:
 
 Add custom teams via Admin → **+ Team**.
 
+App Link: https://chaos-or-release-v2-production.up.railway.app/
+
 ---
 
 ## Deployment (Railway)
